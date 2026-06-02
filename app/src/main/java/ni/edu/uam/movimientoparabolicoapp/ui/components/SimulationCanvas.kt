@@ -7,27 +7,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ni.edu.uam.movimientoparabolicoapp.domain.CollisionInfo
 import ni.edu.uam.movimientoparabolicoapp.domain.Vector2D
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.CanvasBg
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.CollisionGreen
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.GroundGreen
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.ProjectileBlue
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.TargetOrange
 
 /**
  * Canvas que dibuja la simulación en 2D.
- *
- * Muestra:
- * - Suelo y cuadrícula de referencia
- * - Trayectorias completas punteadas
- * - Trayectorias recorridas sólidas
- * - Dos objetos de colores diferentes
- * - Punto de colisión si ocurrió
  */
 @Composable
 fun SimulationCanvas(
@@ -43,56 +44,49 @@ fun SimulationCanvas(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(280.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(color = Color(0xFFf0f7fd))
+            .height(260.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(color = CanvasBg)
     ) {
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth()) {
             val canvasWidth = size.width
             val canvasHeight = size.height
 
-            // Calcula los límites del mundo para encuadre automático
             val worldBounds = calculateWorldBounds(
                 projectileTrajectory,
                 targetTrajectory,
                 collisionInfo
             )
 
-            // ========== Dibuja fondo y suelo ==========
-            drawRect(
-                color = Color(0xFFfbf8ff),
-                size = size
-            )
+            // Fondo blanco sutil
+            drawRect(color = Color.White.copy(alpha = 0.5f), size = size)
 
-            // Suelo (línea verde en la parte inferior)
-            val groundY = canvasHeight - 30f
+            // Suelo (según mockup)
+            val groundY = canvasHeight - 40f
+            drawRect(
+                color = GroundGreen,
+                topLeft = Offset(0f, groundY),
+                size = androidx.compose.ui.geometry.Size(canvasWidth, canvasHeight - groundY)
+            )
             drawLine(
-                color = Color(0xFF3c7846),
+                color = Color(0xFF88A085),
                 start = Offset(0f, groundY),
                 end = Offset(canvasWidth, groundY),
                 strokeWidth = 2f
             )
 
-            // Relleno del suelo
-            drawRect(
-                color = Color(0xFF3c7846),
-                topLeft = Offset(0f, groundY),
-                size = androidx.compose.ui.geometry.Size(canvasWidth, canvasHeight - groundY),
-                alpha = 0.2f
-            )
-
-            // ========== Dibuja cuadrícula de referencia ==========
+            // Cuadrícula sutil
             drawGrid(worldBounds, canvasWidth, canvasHeight)
 
-            // ========== Dibuja trayectorias punteadas (predicción) ==========
+            // Trayectorias predicción (punteadas)
             if (projectileTrajectory.isNotEmpty()) {
                 drawTrajectory(
                     trajectory = projectileTrajectory,
                     worldBounds = worldBounds,
                     canvasWidth = canvasWidth,
                     canvasHeight = canvasHeight,
-                    color = Color(0xFF4f5bd5),
-                    strokeWidth = 1.5f,
+                    color = ProjectileBlue,
+                    strokeWidth = 1.2f,
                     isDashed = true
                 )
             }
@@ -103,13 +97,13 @@ fun SimulationCanvas(
                     worldBounds = worldBounds,
                     canvasWidth = canvasWidth,
                     canvasHeight = canvasHeight,
-                    color = Color(0xFFe0552b),
-                    strokeWidth = 1.5f,
+                    color = TargetOrange,
+                    strokeWidth = 1.2f,
                     isDashed = true
                 )
             }
 
-            // ========== Dibuja trayectorias recorridas (sólidas) ==========
+            // Trayectorias recorridas (sólidas)
             if (projectileTrajectory.isNotEmpty()) {
                 val traveledProj = projectileTrajectory.filter { (t, _) -> t <= currentTime }
                 drawTrajectory(
@@ -117,33 +111,20 @@ fun SimulationCanvas(
                     worldBounds = worldBounds,
                     canvasWidth = canvasWidth,
                     canvasHeight = canvasHeight,
-                    color = Color(0xFF4f5bd5),
-                    strokeWidth = 2.5f,
+                    color = ProjectileBlue,
+                    strokeWidth = 2f,
                     isDashed = false
                 )
             }
 
-            if (targetTrajectory.isNotEmpty()) {
-                val traveledTarget = targetTrajectory.filter { (t, _) -> t <= currentTime }
-                drawTrajectory(
-                    trajectory = traveledTarget,
-                    worldBounds = worldBounds,
-                    canvasWidth = canvasWidth,
-                    canvasHeight = canvasHeight,
-                    color = Color(0xFFe0552b),
-                    strokeWidth = 2.5f,
-                    isDashed = false
-                )
-            }
-
-            // ========== Dibuja objetos ==========
+            // Objetos
             drawObject(
                 pos = projectilePos,
                 worldBounds = worldBounds,
                 canvasWidth = canvasWidth,
                 canvasHeight = canvasHeight,
-                color = Color(0xFF4f5bd5),
-                radius = 8f
+                color = ProjectileBlue,
+                radius = 10f
             )
 
             drawObject(
@@ -151,11 +132,11 @@ fun SimulationCanvas(
                 worldBounds = worldBounds,
                 canvasWidth = canvasWidth,
                 canvasHeight = canvasHeight,
-                color = Color(0xFFe0552b),
-                radius = 8f
+                color = TargetOrange,
+                radius = 10f
             )
 
-            // ========== Dibuja punto de colisión ==========
+            // Colisión
             if (collisionInfo != null && collisionInfo.occurred) {
                 drawCollisionPoint(
                     pos = collisionInfo.position,
@@ -164,9 +145,25 @@ fun SimulationCanvas(
                     canvasHeight = canvasHeight
                 )
             }
+        }
 
-            // ========== Dibuja información en la esquina ==========
-            // (Se deja en los readouts UI, no en el canvas)
+        // Overlay de tiempo (t = 0.00 s)
+        Box(
+            modifier = Modifier
+                .padding(12.dp)
+                .background(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Text(
+                text = "t = ${String.format("%.2f", currentTime)} s",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace
+            )
         }
     }
 }
@@ -179,12 +176,10 @@ private fun DrawScope.calculateWorldBounds(
     val allPositions = (projTraj.map { it.second } + targetTraj.map { it.second }).toMutableList()
     if (collision != null) allPositions.add(collision.position)
 
-    if (allPositions.isEmpty()) {
-        return WorldBounds(maxX = 10.0, maxY = 10.0)
-    }
+    if (allPositions.isEmpty()) return WorldBounds(maxX = 12.0, maxY = 10.0)
 
-    val maxX = (allPositions.maxOfOrNull { it.x } ?: 10.0) + 2.0
-    val maxY = (allPositions.maxOfOrNull { it.y } ?: 10.0) + 2.0
+    val maxX = (allPositions.maxOfOrNull { it.x } ?: 10.0) + 3.0
+    val maxY = (allPositions.maxOfOrNull { it.y } ?: 8.0) + 3.0
 
     return WorldBounds(maxX = maxX, maxY = maxY)
 }
@@ -197,8 +192,8 @@ private fun DrawScope.world2Canvas(
     canvasWidth: Float,
     canvasHeight: Float
 ): Offset {
-    val canvasX = 30f + ((worldPos.x / worldBounds.maxX) * (canvasWidth - 45f)).toFloat()
-    val canvasY = canvasHeight - 30f - ((worldPos.y / worldBounds.maxY) * (canvasHeight - 50f)).toFloat()
+    val canvasX = 40f + ((worldPos.x / worldBounds.maxX) * (canvasWidth - 80f)).toFloat()
+    val canvasY = canvasHeight - 40f - ((worldPos.y / worldBounds.maxY) * (canvasHeight - 80f)).toFloat()
     return Offset(canvasX, canvasY)
 }
 
@@ -207,21 +202,12 @@ private fun DrawScope.drawGrid(
     canvasWidth: Float,
     canvasHeight: Float
 ) {
-    val gridSpacing = kotlin.math.ceil(worldBounds.maxX / 6).toInt().coerceAtLeast(1)
-
-    for (gx in 0..worldBounds.maxX.toInt() step gridSpacing) {
-        val offset = world2Canvas(
-            Vector2D(gx.toDouble(), 0.0),
-            worldBounds,
-            canvasWidth,
-            canvasHeight
-        )
-        drawLine(
-            color = Color(0x20464f),
-            start = Offset(offset.x, 12f),
-            end = Offset(offset.x, canvasHeight - 30f),
-            strokeWidth = 1f
-        )
+    val gridCount = 8
+    val color = Color.LightGray.copy(alpha = 0.3f)
+    
+    for (i in 0..gridCount) {
+        val x = 40f + (i * (canvasWidth - 80f) / gridCount)
+        drawLine(color = color, start = Offset(x, 0f), end = Offset(x, canvasHeight - 40f), strokeWidth = 1f)
     }
 }
 
@@ -235,27 +221,22 @@ private fun DrawScope.drawTrajectory(
     isDashed: Boolean
 ) {
     if (trajectory.isEmpty()) return
-
-    val points = trajectory
-        .filter { (_, pos) -> pos.y >= -0.5 }
-        .map { (_, pos) -> world2Canvas(pos, worldBounds, canvasWidth, canvasHeight) }
-
+    val points = trajectory.map { world2Canvas(it.second, worldBounds, canvasWidth, canvasHeight) }
     if (points.size < 2) return
 
-    val path = androidx.compose.ui.graphics.Path()
-    path.moveTo(points[0].x, points[0].y)
-    for (i in 1 until points.size) {
-        path.lineTo(points[i].x, points[i].y)
+    val path = androidx.compose.ui.graphics.Path().apply {
+        moveTo(points[0].x, points[0].y)
+        points.drop(1).forEach { lineTo(it.x, it.y) }
     }
 
     drawPath(
         path = path,
         color = color,
-        style = Stroke(width = strokeWidth, pathEffect = if (isDashed) {
-            androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                intervals = floatArrayOf(4f, 4f)
-            )
-        } else null)
+        style = Stroke(
+            width = strokeWidth,
+            pathEffect = if (isDashed) androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f, 8f)) else null
+        ),
+        alpha = if (isDashed) 0.4f else 1.0f
     )
 }
 
@@ -268,21 +249,8 @@ private fun DrawScope.drawObject(
     radius: Float
 ) {
     val canvasPos = world2Canvas(pos, worldBounds, canvasWidth, canvasHeight)
-
-    // Círculo del objeto
-    drawCircle(
-        color = color,
-        radius = radius,
-        center = canvasPos
-    )
-
-    // Destello blanco
-    drawCircle(
-        color = Color.White,
-        radius = 2.5f,
-        center = Offset(canvasPos.x - 2.5f, canvasPos.y - 2.5f),
-        alpha = 0.5f
-    )
+    drawCircle(color = color, radius = radius, center = canvasPos)
+    drawCircle(color = Color.White, radius = radius * 0.4f, center = Offset(canvasPos.x - radius*0.3f, canvasPos.y - radius*0.3f), alpha = 0.4f)
 }
 
 private fun DrawScope.drawCollisionPoint(
@@ -292,22 +260,6 @@ private fun DrawScope.drawCollisionPoint(
     canvasHeight: Float
 ) {
     val canvasPos = world2Canvas(pos, worldBounds, canvasWidth, canvasHeight)
-
-    // Círculo exterior verde
-    drawCircle(
-        color = Color(0xFF1f8a4c),
-        radius = 11f,
-        center = canvasPos,
-        alpha = 0.9f
-    )
-
-    // Símbolo de choque
-    drawCircle(
-        color = Color.White,
-        radius = 3f,
-        center = canvasPos
-    )
+    drawCircle(color = CollisionGreen, radius = 14f, center = canvasPos, alpha = 0.3f)
+    drawCircle(color = CollisionGreen, radius = 6f, center = canvasPos)
 }
-
-
-

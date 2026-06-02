@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,10 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ni.edu.uam.movimientoparabolicoapp.domain.Vector2D
-import kotlin.math.abs
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.ProjectileBlue
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.TargetOrange
 
 /**
- * Muestra en vivo las posiciones, velocidades y rapidez de ambos objetos.
+ * Muestra en vivo las posiciones y rapidez de ambos objetos.
  */
 @Composable
 fun PositionReadout(
@@ -41,48 +41,27 @@ fun PositionReadout(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
     ) {
-        // Fila con dos tarjetas lado a lado
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
         ) {
-            // Tarjeta del Proyectil A
             ReadoutCard(
                 modifier = Modifier.weight(1f),
                 label = "Objeto A · Proyectil",
-                color = Color(0xFF4f5bd5),
+                color = ProjectileBlue,
                 x = projectilePos.x,
-                y = maxOf(0.0, projectilePos.y),  // y no puede ser negativa
+                y = maxOf(0.0, projectilePos.y),
                 speed = projectileSpeed
             )
 
-            // Tarjeta del Objetivo B
             ReadoutCard(
                 modifier = Modifier.weight(1f),
                 label = "Objeto B · Objetivo",
-                color = Color(0xFFe0552b),
+                color = TargetOrange,
                 x = targetPos.x,
-                y = maxOf(0.0, targetPos.y),  // y no puede ser negativa
+                y = maxOf(0.0, targetPos.y),
                 speed = targetSpeed
             )
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Información adicional: tiempo y distancia
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(14.dp)
-                )
-                .padding(12.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            InfoItem(label = "Tiempo", value = "${String.format("%.2f", currentTime)} s")
-            InfoItem(label = "Distancia", value = "${String.format("%.4f", distance)} m")
         }
     }
 }
@@ -100,115 +79,62 @@ private fun ReadoutCard(
         modifier = modifier
             .background(
                 color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(20.dp)
             )
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
         Column {
-            // Etiqueta con punto de color
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
                     modifier = Modifier
-                        .size(11.dp)
+                        .size(10.dp)
                         .background(color = color, shape = RoundedCornerShape(50.dp))
                 )
                 Text(
                     text = label,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Posición x
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "x",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "${String.format("%.2f", x)} m",
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Posición y
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "y",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "${String.format("%.2f", y)} m",
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Rapidez
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "v",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "${String.format("%.1f", speed)} m/s",
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold,
-                    color = color
-                )
-            }
+            DataRow(label = "x", value = String.format("%.2f m", x))
+            DataRow(label = "y", value = String.format("%.2f m", y))
+            DataRow(label = "v", value = String.format("%.1f m/s", speed), valueColor = color)
         }
     }
 }
 
 @Composable
-private fun InfoItem(label: String, value: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+private fun DataRow(
+    label: String,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium
+            fontFamily = FontFamily.Monospace
         )
         Text(
             text = value,
-            fontSize = 13.sp,
+            fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = valueColor
         )
     }
 }
-

@@ -23,12 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ni.edu.uam.movimientoparabolicoapp.domain.CollisionInfo
 import ni.edu.uam.movimientoparabolicoapp.domain.Vector2D
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.CollisionGreen
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.ProjectileBlue
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.TargetOrange
 
 /**
- * Gráfica de trayectorias usando Canvas.
- *
- * Muestra y(x): altura vs posición horizontal de ambos objetos,
- * incluyendo el punto de colisión.
+ * Gráfica de trayectorias y(x).
  */
 @Composable
 fun TrajectoryChart(
@@ -38,163 +38,118 @@ fun TrajectoryChart(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
-        // Título
         Text(
             text = "Trayectorias y(x)",
-            fontSize = 14.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        // Gráfica
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(220.dp)
                 .background(
                     color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(20.dp)
                 )
-                .padding(12.dp)
+                .padding(16.dp)
         ) {
-            ChartPlaceholder(
+            ChartCanvas(
                 projectileTrajectory = projectileTrajectory,
                 targetTrajectory = targetTrajectory,
                 collisionInfo = collisionInfo
             )
         }
 
-        // Leyenda
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
-            horizontalArrangement = Arrangement.Center,
+                .padding(vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            LegendItem(color = Color(0xFF4f5bd5), label = "Proyectil A")
-            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
-            LegendItem(color = Color(0xFFe0552b), label = "Objetivo B")
-            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
-            LegendItem(color = Color(0xFF1f8a4c), label = "Punto de choque")
+            LegendItem(color = ProjectileBlue, label = "Proyectil")
+            LegendItem(color = TargetOrange, label = "Objetivo")
+            LegendItem(color = CollisionGreen, label = "Colisión")
         }
 
-        // Nota de información
         Text(
-            text = "Curvas generadas a partir de las ecuaciones de cinemática. " +
-                    "Parabólico perfecto sin restricciones de aire.",
-            fontSize = 11.sp,
+            text = "Gráfica analítica de altura (y) vs distancia horizontal (x).",
+            fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
     }
 }
 
 @Composable
-private fun ChartPlaceholder(
+private fun ChartCanvas(
     projectileTrajectory: List<Pair<Double, Vector2D>>,
     targetTrajectory: List<Pair<Double, Vector2D>>,
     collisionInfo: CollisionInfo?
 ) {
-    // Renderiza un gráfico de canvas simple para visualizar las trayectorias y(x)
     androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth()) {
         val width = size.width
         val height = size.height
 
-        // Obtiene los límites de los datos
         val allX = (projectileTrajectory + targetTrajectory).map { it.second.x }
         val allY = (projectileTrajectory + targetTrajectory).map { it.second.y }
 
         if (allX.isEmpty() || allY.isEmpty()) return@Canvas
 
-        val maxX = allX.maxOrNull() ?: 10.0
-        val maxY = allY.maxOrNull() ?: 10.0
+        val maxX = (allX.maxOrNull() ?: 10.0) * 1.1
+        val maxY = (allY.maxOrNull() ?: 10.0) * 1.1
 
-        // Márgenes
-        val marginL = 30f
-        val marginB = 20f
-
-        // Función de transformación de mundo a canvas
-        fun worldToCanvas(x: Double, y: Double): Pair<Float, Float> {
-            val canvasX = (marginL + (x / maxX) * (width - marginL - 10f)).toFloat()
-            val canvasY = (height - marginB - (y / maxY) * (height - marginB - 10f)).toFloat()
-            return Pair(canvasX, canvasY)
+        fun worldToCanvas(x: Double, y: Double): androidx.compose.ui.geometry.Offset {
+            val cx = (x / maxX * width).toFloat()
+            val cy = (height - (y / maxY * height)).toFloat()
+            return androidx.compose.ui.geometry.Offset(cx, cy)
         }
 
-        // Dibuja ejes
-        drawLine(
-            color = Color.Black.copy(alpha = 0.3f),
-            start = androidx.compose.ui.geometry.Offset(marginL, height - marginB),
-            end = androidx.compose.ui.geometry.Offset(width, height - marginB),
-            strokeWidth = 1f
-        )
-        drawLine(
-            color = Color.Black.copy(alpha = 0.3f),
-            start = androidx.compose.ui.geometry.Offset(marginL, height - marginB),
-            end = androidx.compose.ui.geometry.Offset(marginL, 10f),
-            strokeWidth = 1f
-        )
-
-        // Dibuja trayectoria del proyectil
-        val projPoints = projectileTrajectory
-            .filter { it.second.y >= 0 }
-            .map { worldToCanvas(it.second.x, it.second.y) }
-
-        val projPath = androidx.compose.ui.graphics.Path()
-        if (projPoints.isNotEmpty()) {
-            projPath.moveTo(projPoints[0].first, projPoints[0].second)
-            projPoints.drop(1).forEach { (x, y) ->
-                projPath.lineTo(x, y)
-            }
-
-            drawPath(
-                path = projPath,
-                color = Color(0xFF4f5bd5),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                    width = 2.5f
-                )
-            )
+        // Guías
+        val guideColor = Color.LightGray.copy(alpha = 0.2f)
+        for (i in 1..4) {
+            val y = height * i / 5
+            drawLine(color = guideColor, start = androidx.compose.ui.geometry.Offset(0f, y), end = androidx.compose.ui.geometry.Offset(width, y), strokeWidth = 1f)
         }
 
-        // Dibuja trayectoria del objetivo
-        val targetPoints = targetTrajectory
-            .filter { it.second.y >= 0 }
-            .map { worldToCanvas(it.second.x, it.second.y) }
+        // Proyectil
+        drawPathFromTrajectory(projectileTrajectory, ProjectileBlue) { x, y -> worldToCanvas(x, y) }
 
-        val targetPath = androidx.compose.ui.graphics.Path()
-        if (targetPoints.isNotEmpty()) {
-            targetPath.moveTo(targetPoints[0].first, targetPoints[0].second)
-            targetPoints.drop(1).forEach { (x, y) ->
-                targetPath.lineTo(x, y)
-            }
+        // Objetivo
+        drawPathFromTrajectory(targetTrajectory, TargetOrange) { x, y -> worldToCanvas(x, y) }
 
-            drawPath(
-                path = targetPath,
-                color = Color(0xFFe0552b),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                    width = 2.5f
-                )
-            )
-        }
-
-        // Dibuja punto de colisión
+        // Punto de colisión
         if (collisionInfo != null && collisionInfo.occurred) {
-            val (cx, cy) = worldToCanvas(collisionInfo.position.x, collisionInfo.position.y)
-            drawCircle(
-                color = Color(0xFF1f8a4c),
-                radius = 5f,
-                center = androidx.compose.ui.geometry.Offset(cx, cy)
-            )
+            val pos = worldToCanvas(collisionInfo.position.x, collisionInfo.position.y)
+            drawCircle(color = CollisionGreen, radius = 6f, center = pos)
         }
     }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPathFromTrajectory(
+    trajectory: List<Pair<Double, Vector2D>>,
+    color: Color,
+    transform: (Double, Double) -> androidx.compose.ui.geometry.Offset
+) {
+    val points = trajectory.filter { it.second.y >= 0 }.map { transform(it.second.x, it.second.y) }
+    if (points.size < 2) return
+
+    val path = androidx.compose.ui.graphics.Path().apply {
+        moveTo(points[0].x, points[0].y)
+        points.drop(1).forEach { lineTo(it.x, it.y) }
+    }
+
+    drawPath(
+        path = path,
+        color = color,
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
+    )
 }
 
 @Composable
@@ -205,19 +160,14 @@ private fun LegendItem(color: Color, label: String) {
     ) {
         Box(
             modifier = Modifier
-                .size(8.dp)
-                .background(color = color, shape = RoundedCornerShape(50.dp))
+                .size(10.dp)
+                .background(color = color, shape = RoundedCornerShape(2.dp))
         )
         Text(
             text = label,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
-
-
-
-
-

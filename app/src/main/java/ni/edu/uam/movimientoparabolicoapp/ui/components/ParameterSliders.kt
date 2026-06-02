@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ni.edu.uam.movimientoparabolicoapp.data.SimulationParams
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.ProjectileBlue
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.TargetOrange
 
 /**
  * Panel de sliders para controlar todos los parámetros de la simulación.
@@ -42,7 +44,7 @@ fun ParameterSliders(
         // Sección: Proyectil A
         GroupTitle(
             label = "Objeto A — Proyectil",
-            color = Color(0xFF4f5bd5)
+            color = ProjectileBlue
         )
 
         ParameterSlider(
@@ -50,8 +52,8 @@ fun ParameterSliders(
             value = params.projectileInitialSpeed,
             minValue = 1.0,
             maxValue = 40.0,
-            stepValue = 0.5,
             unit = "m/s",
+            color = ProjectileBlue,
             onChange = { newValue ->
                 onParamChange(params.copy(projectileInitialSpeed = newValue))
             }
@@ -62,22 +64,10 @@ fun ParameterSliders(
             value = params.projectileAngleDegrees,
             minValue = 0.0,
             maxValue = 90.0,
-            stepValue = 0.1,
             unit = "°",
+            color = ProjectileBlue,
             onChange = { newValue ->
                 onParamChange(params.copy(projectileAngleDegrees = newValue))
-            }
-        )
-
-        ParameterSlider(
-            label = "Posición inicial x₀",
-            value = params.projectileX,
-            minValue = -5.0,
-            maxValue = 10.0,
-            stepValue = 0.1,
-            unit = "m",
-            onChange = { newValue ->
-                onParamChange(params.copy(projectileX = newValue))
             }
         )
 
@@ -86,44 +76,43 @@ fun ParameterSliders(
         // Sección: Objetivo B
         GroupTitle(
             label = "Objeto B — Objetivo",
-            color = Color(0xFFe0552b)
+            color = TargetOrange
         )
 
         ParameterSlider(
-            label = "Posición x",
+            label = "Distancia horizontal",
             value = params.targetX,
             minValue = 1.0,
             maxValue = 30.0,
-            stepValue = 0.5,
             unit = "m",
+            color = TargetOrange,
             onChange = { newValue ->
                 onParamChange(params.copy(targetX = newValue))
             }
         )
 
         ParameterSlider(
-            label = "Posición y",
+            label = "Altura inicial",
             value = params.targetY,
             minValue = 0.0,
             maxValue = 18.0,
-            stepValue = 0.5,
             unit = "m",
+            color = TargetOrange,
             onChange = { newValue ->
                 onParamChange(params.copy(targetY = newValue))
             }
         )
 
         ParameterSlider(
-            label = "Velocidad inicial v₀",
+            label = "Velocidad inicial v₀ (cae si =0)",
             value = params.targetInitialSpeed,
             minValue = 0.0,
             maxValue = 20.0,
-            stepValue = 0.5,
             unit = "m/s",
+            color = TargetOrange,
             onChange = { newValue ->
                 onParamChange(params.copy(targetInitialSpeed = newValue))
-            },
-            helperText = "Si = 0, cae libremente"
+            }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -131,7 +120,7 @@ fun ParameterSliders(
         // Sección: Entorno
         GroupTitle(
             label = "Entorno",
-            color = Color(0xFF666666)
+            color = Color.Gray
         )
 
         ParameterSlider(
@@ -139,8 +128,8 @@ fun ParameterSliders(
             value = params.gravity,
             minValue = 1.6,
             maxValue = 24.8,
-            stepValue = 0.1,
             unit = "m/s²",
+            color = ProjectileBlue,
             onChange = { newValue ->
                 onParamChange(params.copy(gravity = newValue))
             }
@@ -151,14 +140,14 @@ fun ParameterSliders(
             value = params.animationSpeedMultiplier,
             minValue = 0.2,
             maxValue = 3.0,
-            stepValue = 0.1,
             unit = "×",
+            color = ProjectileBlue,
             onChange = { newValue ->
                 onParamChange(params.copy(animationSpeedMultiplier = newValue))
             }
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -170,18 +159,18 @@ private fun GroupTitle(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 4.dp),
+            .padding(vertical = 12.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(12.dp)
-                .background(color = color, shape = RoundedCornerShape(3.dp))
+                .size(14.dp)
+                .background(color = color, shape = RoundedCornerShape(4.dp))
         )
         Text(
             text = label,
-            fontSize = 13.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -194,19 +183,19 @@ private fun ParameterSlider(
     value: Double,
     minValue: Double,
     maxValue: Double,
-    stepValue: Double,
     unit: String,
-    helperText: String? = null,
+    color: Color,
     onChange: (Double) -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(vertical = 4.dp)
             .background(
                 color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(16.dp)
             )
-            .padding(11.dp)
+            .padding(14.dp)
     ) {
         Column {
             Row(
@@ -216,20 +205,20 @@ private fun ParameterSlider(
             ) {
                 Text(
                     text = label,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${String.format("%.1f", value)} $unit",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = color
                 )
             }
 
-            Spacer(modifier = Modifier.height(7.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Slider(
                 value = value.toFloat(),
@@ -239,24 +228,11 @@ private fun ParameterSlider(
                 valueRange = minValue.toFloat()..maxValue.toFloat(),
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                    thumbColor = color,
+                    activeTrackColor = color,
+                    inactiveTrackColor = color.copy(alpha = 0.1f)
                 )
             )
-
-            if (helperText != null) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = helperText,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                )
-            }
         }
     }
-
-    Spacer(modifier = Modifier.height(9.dp))
 }
-

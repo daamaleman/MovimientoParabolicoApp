@@ -8,18 +8,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ni.edu.uam.movimientoparabolicoapp.ui.theme.ProjectileBlue
 
 /**
  * Controles de transporte: Iniciar/Pausar, Reiniciar.
@@ -33,50 +31,48 @@ fun TransportControls(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+            .height(64.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Botón Play/Pause
+        // Botón Play/Pause (Estilo Pill grande)
         Button(
             onClick = onPlayPause,
             modifier = Modifier
                 .weight(1f)
-                .height(52.dp),
+                .height(64.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (isRunning)
-                    Color(0xFF00897b)  // Verde (running)
-                else
-                    MaterialTheme.colorScheme.primary,  // Azul (paused/stopped)
+                containerColor = ProjectileBlue,
                 contentColor = Color.White
             ),
-            shape = RoundedCornerShape(100.dp)
+            shape = RoundedCornerShape(32.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
         ) {
             Text(
                 text = if (isRunning) "❚❚  Detener" else "▶  Iniciar",
-                fontSize = 14.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (0.5).sp
             )
         }
 
-        // Botón Reset
+        // Botón Reset (Círculo)
         Button(
             onClick = onReset,
             modifier = Modifier
-                .size(52.dp),
+                .size(64.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ),
-            shape = RoundedCornerShape(100.dp)
+            shape = RoundedCornerShape(32.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
         ) {
             Text(
-                text = "⟲",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                text = "⟳",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Normal
             )
         }
     }
 }
-
