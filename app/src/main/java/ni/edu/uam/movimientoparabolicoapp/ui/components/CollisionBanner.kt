@@ -36,10 +36,11 @@ fun CollisionBanner(collisionInfo: CollisionInfo?) {
                 Text("🎯", fontSize = 20.sp)
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "¡COLISIÓN DETECTADA! t = ${String.format("%.2f", collisionInfo.time)} s",
+                    text = "¡COLISIÓN! t = ${String.format("%.2f", collisionInfo.time)}s | " +
+                            "Pos: (${String.format("%.2f", collisionInfo.position.x)}, ${String.format("%.2f", collisionInfo.position.y)}) m",
                     color = Color.White,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     letterSpacing = 0.5.sp
                 )
             }

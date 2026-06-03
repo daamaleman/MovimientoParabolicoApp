@@ -14,10 +14,10 @@ data class CollisionInfo(
  * Detector de colisiones entre dos cuerpos.
  *
  * Calcula la distancia euclidiana entre ambos objetos en cada frame.
- * El umbral se ha ajustado a 0.5m para una mejor respuesta visual en la app.
+ * El umbral se ha ajustado a 1 milímetro (0.001 m) para máxima precisión física.
  */
 class CollisionDetector(
-    val threshold: Double = 0.5 // 50 cm para mejor detección visual
+    val threshold: Double = 0.001 // 1 mm en metros
 ) {
 
     /**
