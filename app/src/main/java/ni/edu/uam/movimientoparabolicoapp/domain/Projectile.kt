@@ -5,46 +5,32 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Representa un proyectil (cuerpo A) lanzado con velocidad inicial v0 y ángulo theta.
+ * Representa el Objeto A (Proyectil) de la simulación.
  *
- * Ecuaciones de movimiento parabólico:
- *   x(t) = x0 + v0x * t
- *   y(t) = y0 + v0y * t - 0.5 * g * t^2
+ * Implementa las ecuaciones clásicas de la cinemática para un objeto lanzado 
+ * con una rapidez inicial y un ángulo determinado.
  *
- * donde:
- *   v0x = v0 * cos(theta)
- *   v0y = v0 * sin(theta)
+ * Fórmulas Físicas:
+ * 1. Descomposición de velocidad: v0x = v0·cos(θ), v0y = v0·sin(θ)
+ * 2. Posición X (MRU): x = x0 + v0x·t
+ * 3. Posición Y (MRUV): y = y0 + v0y·t - 0.5·g·t²
  */
 class Projectile(
     val initialPosition: Vector2D,
-    val initialSpeed: Double,  // v0 en m/s
-    val angleRadians: Double,  // ángulo en radianes
-    val gravity: Double = 9.81 // g en m/s^2
+    val initialSpeed: Double,  
+    val angleRadians: Double,  
+    val gravity: Double = 9.81 
 ) : PhysicsBody {
 
-    // Componentes iniciales de velocidad
+    // Componentes de velocidad inicial calculados una sola vez al instanciar
     private val v0x: Double = initialSpeed * cos(angleRadians)
     private val v0y: Double = initialSpeed * sin(angleRadians)
 
     /**
-     * Altura máxima que alcanzará el proyectil
-     */
-    val maxHeight: Double
-        get() = initialPosition.y + (v0y * v0y) / (2 * gravity)
-
-    /**
-     * Alcance horizontal (si el suelo está en y=0)
-     */
-    val horizontalRange: Double
-        get() {
-            val t = getFlightTime()
-            return initialPosition.x + v0x * t
-        }
-
-    /**
-     * Calcula la posición en el tiempo t
-     * x(t) = x0 + v0x * t
-     * y(t) = y0 + v0y * t - 0.5 * g * t^2
+     * Calcula la posición (x, y) en cualquier segundo 't'.
+     * 
+     * Implementa la superposición de movimientos: Rectilíneo Uniforme en el eje X
+     * y Uniformemente Variado (caída libre) en el eje Y.
      */
     override fun getPosition(t: Double): Vector2D {
         val x = initialPosition.x + v0x * t
@@ -53,9 +39,10 @@ class Projectile(
     }
 
     /**
-     * Calcula la velocidad en el tiempo t
-     * vx(t) = v0x (constante)
-     * vy(t) = v0y - g * t
+     * Calcula el vector velocidad (vx, vy) en el tiempo 't'.
+     * 
+     * Nota: vx es constante ya que no hay fricción con el aire.
+     * vy decrece linealmente debido a la gravedad.
      */
     override fun getVelocity(t: Double): Vector2D {
         val vx = v0x
@@ -64,26 +51,24 @@ class Projectile(
     }
 
     /**
-     * Tiempo de vuelo: cuando y(t) = 0
-     * y0 + v0y * t - 0.5 * g * t^2 = 0
-     * 0.5 * g * t^2 - v0y * t - y0 = 0
-     * t = (v0y ± sqrt(v0y^2 + 2 * g * y0)) / g
-     * tomamos la solución positiva
+     * Resuelve la ecuación cuadrática de posición vertical para hallar el tiempo
+     * en el que el proyectil impacta contra el suelo (y = 0).
+     * 
+     * Se utiliza la fórmula general para ecuaciones de segundo grado.
      */
     override fun getFlightTime(): Double {
-        if (initialPosition.y == 0.0 && v0y <= 0) return 0.0
+        // Caso especial: si ya está en el suelo y no tiene impulso hacia arriba
+        if (initialPosition.y <= 0.0 && v0y <= 0) return 0.0
 
+        // Discriminante: b² - 4ac
         val discriminant = v0y * v0y + 2 * gravity * initialPosition.y
         if (discriminant < 0) return 0.0
 
+        // Obtenemos las dos posibles soluciones
         val t1 = (v0y + sqrt(discriminant)) / gravity
         val t2 = (v0y - sqrt(discriminant)) / gravity
 
+        // Retornamos la solución positiva (el tiempo futuro)
         return if (t1 > 0 && t2 > 0) maxOf(t1, t2) else maxOf(t1, t2, 0.0)
     }
-
-    override fun toString(): String {
-        return "Projectile(pos=$initialPosition, v0=$initialSpeed m/s, angle=${Math.toDegrees(angleRadians)}°)"
-    }
 }
-

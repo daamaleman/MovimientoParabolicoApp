@@ -1,7 +1,12 @@
 package ni.edu.uam.movimientoparabolicoapp.domain
 
 /**
- * Representa la información de una colisión detectada.
+ * Clase que encapsula los datos resultantes de una colisión.
+ * 
+ * @property occurred Indica si el choque efectivamente sucedió.
+ * @property time Instante exacto en segundos donde ocurrió el contacto.
+ * @property position Coordenada (x,y) del punto de impacto.
+ * @property distance Distancia mínima alcanzada entre los cuerpos.
  */
 data class CollisionInfo(
     val occurred: Boolean = false,
@@ -11,22 +16,22 @@ data class CollisionInfo(
 )
 
 /**
- * Detector de colisiones entre dos cuerpos.
+ * Motor de detección de proximidad entre dos objetos físicos.
  *
- * Calcula la distancia euclidiana entre ambos objetos en cada frame.
- * El umbral se ha ajustado a 1 milímetro (0.001 m) para máxima precisión física.
+ * Utiliza algoritmos de geometría analítica para determinar si dos proyectiles
+ * se han encontrado en el espacio-tiempo.
+ *
+ * @property threshold Distancia mínima (en metros) para considerar que existe un choque.
+ *                     Por defecto es 1mm (0.001m), lo que exige una precisión extrema.
  */
 class CollisionDetector(
-    val threshold: Double = 0.001 // 1 mm en metros
+    val threshold: Double = 0.001 
 ) {
 
     /**
-     * Detecta si hay colisión entre dos cuerpos en un tiempo específico.
-     *
-     * @param bodyA Primer cuerpo
-     * @param bodyB Segundo cuerpo
-     * @param time Tiempo actual en segundos
-     * @return CollisionInfo con los datos de la colisión
+     * Evalúa la colisión en un único punto temporal.
+     * 
+     * Compara las posiciones de A y B en el tiempo 't' y calcula su distancia euclidiana.
      */
     fun detectCollision(
         bodyA: PhysicsBody,
@@ -37,11 +42,12 @@ class CollisionDetector(
         val posB = bodyB.getPosition(time)
         val distance = posA.distanceTo(posB)
 
+        // Si la distancia es menor al umbral (1mm), hay colisión
         return if (distance < threshold) {
             CollisionInfo(
                 occurred = true,
                 time = time,
-                position = (posA + posB) / 2.0,  // Promedio de posiciones
+                position = (posA + posB) / 2.0, // Punto medio del impacto
                 distance = distance
             )
         } else {
@@ -55,17 +61,14 @@ class CollisionDetector(
     }
 
     /**
-     * Busca el punto de colisión más cercano en un intervalo de tiempo,
-     * usando búsqueda binaria para mayor precisión.
+     * Algoritmo de búsqueda de colisiones por intervalos.
+     * 
+     * Este método es vital para simulaciones digitales. Debido a que el tiempo avanza
+     * en "saltos" (frames), dos objetos rápidos podrían saltarse el uno al otro.
+     * Este método escanea el intervalo entre frames para asegurar que no se pierda el impacto.
      *
-     * Útil para no "saltarse" colisiones en frames con dt grandes.
-     *
-     * @param bodyA Primer cuerpo
-     * @param bodyB Segundo cuerpo
-     * @param startTime Tiempo inicial del intervalo
-     * @param endTime Tiempo final del intervalo
-     * @param maxIterations Iteraciones máximas de búsqueda binaria
-     * @return CollisionInfo con el tiempo y posición más precisos de colisión
+     * @param startTime Tiempo al inicio del frame.
+     * @param endTime Tiempo al final del frame.
      */
     fun findCollisionInInterval(
         bodyA: PhysicsBody,
@@ -78,7 +81,7 @@ class CollisionDetector(
         var minTime = startTime
         var minPosition = Vector2D()
 
-        // Búsqueda inicial para ver si hay colisión en el intervalo
+        // Escaneo de alta resolución (100 muestras) dentro del pequeño intervalo temporal
         for (i in 0..100) {
             val t = startTime + (endTime - startTime) * (i / 100.0)
             val posA = bodyA.getPosition(t)
@@ -105,8 +108,9 @@ class CollisionDetector(
     }
 
     /**
-     * Obtiene la distancia mínima entre dos cuerpos en un intervalo de tiempo.
-     * Útil para análisis y depuración.
+     * Calcula la aproximación máxima (distancia mínima) entre dos cuerpos en un rango dado.
+     * 
+     * @return Un par que contiene (instante de máxima cercanía, distancia mínima).
      */
     fun getMinimumDistance(
         bodyA: PhysicsBody,
@@ -133,4 +137,3 @@ class CollisionDetector(
         return Pair(minTime, minDistance)
     }
 }
-

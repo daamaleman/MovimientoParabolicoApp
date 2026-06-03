@@ -1,24 +1,26 @@
 package ni.edu.uam.movimientoparabolicoapp.domain
 
 import kotlin.math.hypot
-import kotlin.math.sqrt
 
 /**
- * Representa un vector 2D con componentes x, y.
- * Incluye operadores útiles para cálculos de cinemática.
+ * Data class que representa un vector en el plano cartesiano de dos dimensiones.
+ * 
+ * Es la unidad básica de posición y velocidad en todo el motor de física.
  */
 data class Vector2D(
     val x: Double = 0.0,
     val y: Double = 0.0
 ) {
     /**
-     * Magnitud del vector: sqrt(x^2 + y^2)
+     * Calcula el módulo o magnitud del vector.
+     * Representa la rapidez si el vector es de velocidad, o el radio vector si es posición.
      */
     val magnitude: Double
         get() = hypot(x, y)
 
     /**
-     * Componentes del vector
+     * Sobrecarga de operadores aritméticos para permitir operaciones matemáticas
+     * directas entre objetos Vector2D (ej: vector1 + vector2).
      */
     operator fun plus(other: Vector2D) = Vector2D(x + other.x, y + other.y)
     operator fun minus(other: Vector2D) = Vector2D(x - other.x, y - other.y)
@@ -26,10 +28,10 @@ data class Vector2D(
     operator fun div(scalar: Double) = Vector2D(x / scalar, y / scalar)
 
     /**
-     * Distancia euclidiana entre este vector y otro (usada para colisión)
+     * Calcula la distancia en línea recta entre dos puntos (Euclidiana).
+     * Es la operación fundamental utilizada por el [CollisionDetector].
      */
     fun distanceTo(other: Vector2D): Double = (this - other).magnitude
 
-    override fun toString(): String = "(x=$x, y=$y)"
+    override fun toString(): String = "(${String.format("%.2f", x)}, ${String.format("%.2f", y)})"
 }
-

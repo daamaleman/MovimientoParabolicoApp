@@ -5,42 +5,29 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Representa el objetivo (cuerpo B) que cae desde una posición inicial.
+ * Representa el Objeto B (Objetivo) de la simulación.
  *
- * Puede estar en dos modos:
- * 1. Si v0 = 0: cae en caída libre vertical desde (x0, y0)
- *    x(t) = x0 (constante)
- *    y(t) = y0 - 0.5 * g * t^2
- *
- * 2. Si v0 > 0: se lanza hacia el proyectil con un ángulo calculado
- *    (típicamente hacia abajo y hacia la izquierda si el proyectil está en x=0)
- *    x(t) = x0 + v0x * t
- *    y(t) = y0 + v0y * t - 0.5 * g * t^2
+ * El objetivo puede comportarse de dos formas:
+ * 1. Caída Libre: Si su rapidez inicial es 0, simplemente cae verticalmente.
+ * 2. Lanzamiento: Si tiene rapidez inicial, describe una parábola similar al proyectil.
  */
 class FallingTarget(
     val initialPosition: Vector2D,
-    val initialSpeed: Double,       // v0 en m/s (0 = caída libre vertical)
-    val angleRadians: Double = 0.0, // ángulo en radianes (usado si v0 > 0)
-    val gravity: Double = 9.81      // g en m/s^2
+    val initialSpeed: Double,       
+    val angleRadians: Double = 0.0, 
+    val gravity: Double = 9.81      
 ) : PhysicsBody {
 
+    // Componentes de velocidad inicial. 
+    // Si initialSpeed es 0, ambos componentes serán 0 (caída libre pura).
     private val v0x: Double = initialSpeed * cos(angleRadians)
     private val v0y: Double = initialSpeed * sin(angleRadians)
 
     /**
-     * Altura máxima (relevante solo si se lanza hacia arriba, v0y > 0)
-     */
-    val maxHeight: Double
-        get() {
-            return if (v0y > 0) {
-                initialPosition.y + (v0y * v0y) / (2 * gravity)
-            } else {
-                initialPosition.y
-            }
-        }
-
-    /**
-     * Calcula la posición en el tiempo t
+     * Calcula la posición (x, y) en el instante 't'.
+     * 
+     * Sigue el mismo principio de superposición que el Proyectil, pero usualmente 
+     * inicia desde una altura mayor.
      */
     override fun getPosition(t: Double): Vector2D {
         val x = initialPosition.x + v0x * t
@@ -49,7 +36,7 @@ class FallingTarget(
     }
 
     /**
-     * Calcula la velocidad en el tiempo t
+     * Calcula la velocidad instantánea (vx, vy).
      */
     override fun getVelocity(t: Double): Vector2D {
         val vx = v0x
@@ -58,7 +45,7 @@ class FallingTarget(
     }
 
     /**
-     * Tiempo de vuelo: cuando y(t) = 0
+     * Determina cuánto tiempo tarda el objetivo en tocar el suelo.
      */
     override fun getFlightTime(): Double {
         if (initialPosition.y <= 0) return 0.0
@@ -71,10 +58,4 @@ class FallingTarget(
 
         return if (t1 > 0 && t2 > 0) maxOf(t1, t2) else maxOf(t1, t2, 0.0)
     }
-
-    override fun toString(): String {
-        val modeStr = if (initialSpeed == 0.0) "caída libre" else "lanzado"
-        return "FallingTarget(pos=$initialPosition, v0=$initialSpeed m/s, mode=$modeStr)"
-    }
 }
-

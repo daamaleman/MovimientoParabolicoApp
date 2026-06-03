@@ -1,25 +1,29 @@
 package ni.edu.uam.movimientoparabolicoapp.domain
 
 import kotlin.math.atan2
-import kotlin.math.sqrt
 
 /**
- * Motor de cinemática que maneja todas las operaciones de cálculo de movimiento parabólico.
+ * Motor de cinemática que centraliza todos los cálculos físicos de la aplicación.
+ * 
+ * Esta clase actúa como un "Orquestador", utilizando las leyes de la física para predecir
+ * el comportamiento de proyectiles y objetivos bajo la influencia de la gravedad.
  *
- * Proporciona métodos para:
- * - Crear y actualizar cuerpos
- * - Calcular posiciones y velocidades
- * - Detectar colisiones
- * - Calcular magnitudes derivadas (altura máxima, alcance, tiempo de vuelo, etc.)
+ * @property gravity Valor de la aceleración gravitacional (m/s^2). Por defecto 9.81 (Tierra).
  */
 class KinematicsEngine(
-    val gravity: Double = 9.81  // Aceleración gravitacional en m/s^2
+    val gravity: Double = 9.81
 ) {
 
+    // Instancia del detector para manejar la lógica de proximidad entre objetos
     private val collisionDetector = CollisionDetector()
 
     /**
-     * Crea un proyectil con los parámetros dados.
+     * Crea una instancia de Proyectil con los parámetros de lanzamiento.
+     * 
+     * @param position Coordenada (x,y) inicial del lanzamiento.
+     * @param initialSpeed Rapidez con la que sale el objeto (v0).
+     * @param angleRadians Ángulo de inclinación respecto a la horizontal.
+     * @return Un objeto de tipo [Projectile] configurado.
      */
     fun createProjectile(
         position: Vector2D,
@@ -35,7 +39,11 @@ class KinematicsEngine(
     }
 
     /**
-     * Crea un objetivo que cae.
+     * Crea una instancia del Objetivo (Objecto B), que típicamente cae libremente.
+     * 
+     * @param position Posición (x,y) desde donde se suelta o lanza el objetivo.
+     * @param initialSpeed Rapidez inicial (0.0 para caída libre pura).
+     * @param angleRadians Ángulo si se desea un lanzamiento inclinado (por defecto 0.0).
      */
     fun createFallingTarget(
         position: Vector2D,
@@ -51,15 +59,16 @@ class KinematicsEngine(
     }
 
     /**
-     * Calcula el ángulo de apuntamiento necesario para hacer que dos cuerpos colisionen.
+     * Implementación del Teorema del "Tiro al Mono".
+     * 
+     * Calcula el ángulo exacto para que el proyectil apunte directamente al objetivo.
+     * En física, si ambos objetos caen con la misma gravedad, este ángulo garantiza
+     * la colisión independientemente de la velocidad, siempre que el proyectil tenga 
+     * suficiente alcance.
      *
-     * Heurística del "tiro al mono": si ambos cuerpos experimentan la misma gravedad,
-     * entonces apuntar al vector que conecta las posiciones iniciales garantiza
-     * que sus trayectorias relativas mantengan la línea de visión.
-     *
-     * @param shooterPos Posición inicial del tirador (cuerpo A)
-     * @param targetPos Posición inicial del objetivo (cuerpo B)
-     * @return Ángulo en radianes (0 a π/2)
+     * @param shooterPos Posición del lanzador (A).
+     * @param targetPos Posición del objetivo (B).
+     * @return Ángulo en radianes calculado mediante la arcotangente (atan2).
      */
     fun calculateMonkeyHunterAngle(
         shooterPos: Vector2D,
@@ -71,7 +80,7 @@ class KinematicsEngine(
     }
 
     /**
-     * Detecta colisión en un tiempo específico.
+     * Determina si ha ocurrido una colisión en un instante exacto de tiempo.
      */
     fun detectCollision(
         projectile: Projectile,
@@ -82,7 +91,10 @@ class KinematicsEngine(
     }
 
     /**
-     * Busca la colisión más precisa en un intervalo de tiempo.
+     * Busca colisiones dentro de un intervalo temporal (t1 a t2).
+     * 
+     * Es crucial para la simulación digital ya que evita que los objetos "atraviesen" 
+     * entre frames si el tiempo avanza muy rápido.
      */
     fun findCollisionInInterval(
         projectile: Projectile,
@@ -94,25 +106,12 @@ class KinematicsEngine(
     }
 
     /**
-     * Obtiene la distancia mínima entre dos cuerpos en un intervalo.
-     * Retorna un Pair(tiempo de distancia mínima, distancia mínima)
-     */
-    fun getMinimumDistance(
-        projectile: Projectile,
-        target: FallingTarget,
-        startTime: Double,
-        endTime: Double
-    ): Pair<Double, Double> {
-        return collisionDetector.getMinimumDistance(projectile, target, startTime, endTime)
-    }
-
-    /**
-     * Genera los puntos de la trayectoria de un cuerpo para su visualización.
-     *
-     * @param body Cuerpo del cual calcular la trayectoria
-     * @param maxTime Tiempo máximo (ej: tiempo de vuelo del cuerpo)
-     * @param samples Número de muestras para la trayectoria
-     * @return Lista de pares (tiempo, posición) ordenados por tiempo
+     * Genera una lista de puntos que representan la parábola recorrida por un cuerpo.
+     * 
+     * @param body El cuerpo físico a analizar.
+     * @param maxTime Tiempo hasta el cual se debe dibujar la línea.
+     * @param samples Cantidad de puntos a generar para la curva (suavizado).
+     * @return Lista de pares (tiempo, posición) para renderizado.
      */
     fun generateTrajectory(
         body: PhysicsBody,
@@ -133,7 +132,7 @@ class KinematicsEngine(
     }
 
     /**
-     * Calcula estadísticas totales del sistema hasta un tiempo dado o frontera de colisión.
+     * Estructura de datos que agrupa todos los resultados de una simulación completa.
      */
     data class SimulationStats(
         val projectileTrajectory: List<Pair<Double, Vector2D>>,
@@ -143,26 +142,29 @@ class KinematicsEngine(
     )
 
     /**
-     * Calcula estadísticas completas de la simulación.
+     * Realiza un análisis exhaustivo de la simulación antes de iniciar la animación.
+     * 
+     * Calcula los tiempos de vuelo de ambos cuerpos y genera sus trayectorias completas
+     * para que la interfaz pueda dibujar las líneas de predicción (punteadas).
      */
     fun calculateSimulationStats(
         projectile: Projectile,
         target: FallingTarget,
-        maxSimulationTime: Double = 10.0  // segundos máximos para simular
+        maxSimulationTime: Double = 10.0
     ): SimulationStats {
-        // Calcula hasta el mínimo entre el tiempo de vuelo y el tiempo máximo de simulación
         val projectileFlightTime = projectile.getFlightTime()
         val targetFlightTime = target.getFlightTime()
+        
+        // El tiempo de análisis es el máximo que dure cualquiera de los dos cuerpos en el aire
         val maxTime = minOf(
             maxOf(projectileFlightTime, targetFlightTime),
             maxSimulationTime
         )
 
-        // Genera trayectorias
         val projTraj = generateTrajectory(projectile, maxTime)
         val targetTraj = generateTrajectory(target, maxTime)
 
-        // Busca colisión
+        // Busca si ocurrirá un choque en algún momento de la trayectoria
         val collision = findCollisionInInterval(projectile, target, 0.0, maxTime)
 
         return SimulationStats(
@@ -174,14 +176,7 @@ class KinematicsEngine(
     }
 
     /**
-     * Verifica si dos cuerpos aún están "en el aire" (y > 0).
-     */
-    fun isInAir(body: PhysicsBody, time: Double): Boolean {
-        return body.getPosition(time).y > 0
-    }
-
-    /**
-     * Obtiene la distancia actual entre dos cuerpos.
+     * Verifica la distancia euclidiana entre dos objetos en un tiempo 't'.
      */
     fun getDistance(
         bodyA: PhysicsBody,
@@ -193,4 +188,3 @@ class KinematicsEngine(
         return posA.distanceTo(posB)
     }
 }
-
