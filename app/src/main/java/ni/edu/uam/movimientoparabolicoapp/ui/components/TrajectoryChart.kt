@@ -1,5 +1,6 @@
 package ni.edu.uam.movimientoparabolicoapp.ui.components
 
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,12 +32,14 @@ import ni.edu.uam.movimientoparabolicoapp.ui.theme.ProjectileBlue
 import ni.edu.uam.movimientoparabolicoapp.ui.theme.TargetOrange
 
 /**
- * Gráfica de trayectorias y(x) mejorada visualmente.
+ * Gráfica de trayectorias y(x) dinámica y moderna.
  */
 @Composable
 fun TrajectoryChart(
     projectileTrajectory: List<Pair<Double, Vector2D>>,
     targetTrajectory: List<Pair<Double, Vector2D>>,
+    projectilePos: Vector2D,
+    targetPos: Vector2D,
     collisionInfo: CollisionInfo?,
     modifier: Modifier = Modifier
 ) {
@@ -42,7 +47,7 @@ fun TrajectoryChart(
         modifier = modifier.fillMaxWidth()
     ) {
         Text(
-            text = "Análisis de Trayectorias y(x)",
+            text = "Gráfica de Trayectorias (Dinámica)",
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -52,16 +57,18 @@ fun TrajectoryChart(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp)
+                .height(260.dp)
                 .background(
                     color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(24.dp)
                 )
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
             ChartCanvas(
                 projectileTrajectory = projectileTrajectory,
                 targetTrajectory = targetTrajectory,
+                projectilePos = projectilePos,
+                targetPos = targetPos,
                 collisionInfo = collisionInfo
             )
         }
@@ -75,16 +82,8 @@ fun TrajectoryChart(
         ) {
             LegendItem(color = ProjectileBlue, label = "Proyectil")
             LegendItem(color = TargetOrange, label = "Objetivo")
-            LegendItem(color = CollisionGreen, label = "Colisión")
+            LegendItem(color = CollisionGreen, label = "Impacto")
         }
-
-        Text(
-            text = "Gráfica de altura (y) vs distancia (x) en metros.",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
     }
 }
 
@@ -92,9 +91,11 @@ fun TrajectoryChart(
 private fun ChartCanvas(
     projectileTrajectory: List<Pair<Double, Vector2D>>,
     targetTrajectory: List<Pair<Double, Vector2D>>,
+    projectilePos: Vector2D,
+    targetPos: Vector2D,
     collisionInfo: CollisionInfo?
 ) {
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val onSurface = MaterialTheme.colorScheme.onSurface
     
     androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth()) {
         val width = size.width
@@ -103,63 +104,90 @@ private fun ChartCanvas(
         val allX = (projectileTrajectory + targetTrajectory).map { it.second.x }
         val allY = (projectileTrajectory + targetTrajectory).map { it.second.y }
 
-        if (allX.isEmpty() || allY.isEmpty()) return@Canvas
+        if (allX.isEmpty()) return@Canvas
 
-        val maxX = (allX.maxOrNull() ?: 10.0).coerceAtLeast(1.0) * 1.2
-        val maxY = (allY.maxOrNull() ?: 10.0).coerceAtLeast(1.0) * 1.3 // Más margen arriba
+        // Escalamiento con márgenes inteligentes para evitar el efecto "pegado al techo"
+        val rawMaxX = allX.maxOrNull() ?: 10.0
+        val rawMaxY = allY.maxOrNull() ?: 10.0
+        
+        val maxX = rawMaxX * 1.15
+        val maxY = rawMaxY * 1.4 // Margen superior extra para etiquetas
 
         fun worldToCanvas(x: Double, y: Double): androidx.compose.ui.geometry.Offset {
-            val padding = 24f
-            val availableWidth = width - (padding * 2)
-            val availableHeight = height - (padding * 2)
+            val hPadding = 40f
+            val vPadding = 40f
+            val availableWidth = width - (hPadding * 2)
+            val availableHeight = height - (vPadding * 2)
 
-            val cx = padding + (x / maxX * availableWidth).toFloat()
-            val cy = (height - padding) - (y / maxY * availableHeight).toFloat()
+            val cx = hPadding + (x / maxX * availableWidth).toFloat()
+            val cy = (height - vPadding) - (y / maxY * availableHeight).toFloat()
             return androidx.compose.ui.geometry.Offset(cx, cy)
         }
 
-        // Grilla
-        val guideColor = Color.Gray.copy(alpha = 0.1f)
-        val divisions = 5
-        for (i in 0..divisions) {
-            val yVal = (maxY / divisions) * i
+        // --- Grilla y Ejes ---
+        val gridColor = onSurface.copy(alpha = 0.05f)
+        val axisColor = onSurface.copy(alpha = 0.4f)
+        val origin = worldToCanvas(0.0, 0.0)
+
+        // Líneas de referencia
+        for (i in 1..4) {
+            val yVal = (maxY / 5) * i
             val yPos = worldToCanvas(0.0, yVal).y
-            drawLine(color = guideColor, start = androidx.compose.ui.geometry.Offset(0f, yPos), end = androidx.compose.ui.geometry.Offset(width, yPos), strokeWidth = 1f)
-            
-            val xVal = (maxX / divisions) * i
-            val xPos = worldToCanvas(xVal, 0.0).x
-            drawLine(color = guideColor, start = androidx.compose.ui.geometry.Offset(xPos, 0f), end = androidx.compose.ui.geometry.Offset(xPos, height), strokeWidth = 1f)
+            drawLine(color = gridColor, start = androidx.compose.ui.geometry.Offset(0f, yPos), end = androidx.compose.ui.geometry.Offset(width, yPos))
         }
 
-        // Ejes
-        val axisColor = onSurfaceColor.copy(alpha = 0.6f)
-        val origin = worldToCanvas(0.0, 0.0)
-        drawLine(color = axisColor, start = androidx.compose.ui.geometry.Offset(0f, origin.y), end = androidx.compose.ui.geometry.Offset(width, origin.y), strokeWidth = 2f)
+        // Dibujar Ejes
         drawLine(color = axisColor, start = androidx.compose.ui.geometry.Offset(origin.x, 0f), end = androidx.compose.ui.geometry.Offset(origin.x, height), strokeWidth = 2f)
+        drawLine(color = axisColor, start = androidx.compose.ui.geometry.Offset(0f, origin.y), end = androidx.compose.ui.geometry.Offset(width, origin.y), strokeWidth = 2f)
 
-        // Etiquetas de escala
+        // --- Dibujar Trayectorias (Áreas y Líneas) ---
+        
+        // 1. Áreas sombreadas (Gradientes)
+        drawAreaUnderTrajectory(projectileTrajectory, ProjectileBlue.copy(alpha = 0.1f)) { x, y -> worldToCanvas(x, y) }
+        drawAreaUnderTrajectory(targetTrajectory, TargetOrange.copy(alpha = 0.1f)) { x, y -> worldToCanvas(x, y) }
+
+        // 2. Líneas de trayectoria principal
+        drawPathFromTrajectory(projectileTrajectory, ProjectileBlue, 4f, isDashed = false) { x, y -> worldToCanvas(x, y) }
+        drawPathFromTrajectory(targetTrajectory, TargetOrange, 4f, isDashed = false) { x, y -> worldToCanvas(x, y) }
+
+        // 3. Indicadores de posición actual (Dinamismo)
+        val currentProj = worldToCanvas(projectilePos.x, projectilePos.y)
+        val currentTarget = worldToCanvas(targetPos.x, targetPos.y)
+
+        // Punto proyectil con glow
+        drawCircle(color = ProjectileBlue.copy(alpha = 0.3f), radius = 12f, center = currentProj)
+        drawCircle(color = ProjectileBlue, radius = 6f, center = currentProj)
+
+        // Punto objetivo con glow
+        drawCircle(color = TargetOrange.copy(alpha = 0.3f), radius = 12f, center = currentTarget)
+        drawCircle(color = TargetOrange, radius = 6f, center = currentTarget)
+
+        // --- Etiquetas de Texto (Native Canvas) ---
         drawContext.canvas.nativeCanvas.apply {
             val paint = Paint().apply {
-                color = android.graphics.Color.GRAY
-                textSize = 28f
-                textAlign = Paint.Align.LEFT
+                color = android.graphics.Color.WHITE
+                alpha = 120
+                textSize = 24f
+                isAntiAlias = true
             }
-            drawText("${String.format("%.1f", maxY)}m", origin.x + 8f, 30f, paint)
-            drawText("${String.format("%.1f", maxX)}m", width - 80f, origin.y - 8f, paint)
+            
+            // Etiquetas de ejes
+            drawText("Y", origin.x + 10f, 30f, paint)
+            drawText("X", width - 30f, origin.y - 10f, paint)
+            
+            // Valores dinámicos en los ejes
+            paint.textAlign = Paint.Align.RIGHT
+            drawText("${String.format("%.1f", rawMaxY)}m", origin.x - 10f, worldToCanvas(0.0, rawMaxY).y + 10f, paint)
+            
+            paint.textAlign = Paint.Align.CENTER
+            drawText("${String.format("%.1f", rawMaxX)}m", worldToCanvas(rawMaxX, 0.0).x, origin.y + 30f, paint)
         }
 
-        // Trayectorias con sombra/glow
-        drawPathFromTrajectory(projectileTrajectory, ProjectileBlue.copy(alpha = 0.2f), 8f) { x, y -> worldToCanvas(x, y) }
-        drawPathFromTrajectory(projectileTrajectory, ProjectileBlue, 4f) { x, y -> worldToCanvas(x, y) }
-
-        drawPathFromTrajectory(targetTrajectory, TargetOrange.copy(alpha = 0.2f), 8f) { x, y -> worldToCanvas(x, y) }
-        drawPathFromTrajectory(targetTrajectory, TargetOrange, 4f) { x, y -> worldToCanvas(x, y) }
-
-        // Colisión
+        // --- Colisión ---
         if (collisionInfo != null && collisionInfo.occurred) {
             val pos = worldToCanvas(collisionInfo.position.x, collisionInfo.position.y)
-            drawCircle(color = CollisionGreen, radius = 8f, center = pos)
-            drawCircle(color = CollisionGreen.copy(alpha = 0.3f), radius = 16f, center = pos)
+            drawCircle(color = CollisionGreen, radius = 10f, center = pos)
+            drawCircle(color = CollisionGreen.copy(alpha = 0.2f), radius = 25f, center = pos)
         }
     }
 }
@@ -168,12 +196,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPathFromTraject
     trajectory: List<Pair<Double, Vector2D>>,
     color: Color,
     strokeWidth: Float,
+    isDashed: Boolean,
     transform: (Double, Double) -> androidx.compose.ui.geometry.Offset
 ) {
-    val points = trajectory.filter { it.second.y >= -0.1 }.map { transform(it.second.x, it.second.y) }
+    val points = trajectory.filter { it.second.y >= -0.5 }.map { transform(it.second.x, it.second.y) }
     if (points.size < 2) return
 
-    val path = androidx.compose.ui.graphics.Path().apply {
+    val path = Path().apply {
         moveTo(points[0].x, points[0].y)
         points.drop(1).forEach { lineTo(it.x, it.y) }
     }
@@ -189,22 +218,30 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPathFromTraject
     )
 }
 
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAreaUnderTrajectory(
+    trajectory: List<Pair<Double, Vector2D>>,
+    color: Color,
+    transform: (Double, Double) -> androidx.compose.ui.geometry.Offset
+) {
+    val points = trajectory.filter { it.second.y >= 0 }.map { transform(it.second.x, it.second.y) }
+    if (points.size < 2) return
+
+    val originY = transform(0.0, 0.0).y
+    
+    val path = Path().apply {
+        moveTo(points[0].x, originY)
+        points.forEach { lineTo(it.x, it.y) }
+        lineTo(points.last().x, originY)
+        close()
+    }
+
+    drawPath(path = path, color = color)
+}
+
 @Composable
 private fun LegendItem(color: Color, label: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(12.dp)
-                .background(color = color, shape = RoundedCornerShape(4.dp))
-        )
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(modifier = Modifier.size(10.dp).background(color = color, shape = RoundedCornerShape(3.dp)))
+        Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }

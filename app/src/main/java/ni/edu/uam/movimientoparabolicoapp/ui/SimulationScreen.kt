@@ -215,6 +215,8 @@ fun SimulationScreen(
                     TrajectoryChart(
                         projectileTrajectory = state.projectileTrajectory,
                         targetTrajectory = state.targetTrajectory,
+                        projectilePos = state.projectilePos,
+                        targetPos = state.targetPos,
                         collisionInfo = state.collisionInfo,
                         modifier = Modifier.padding(16.dp)
                     )
