@@ -116,7 +116,7 @@ fun SimulationScreen(
             )
         },
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -238,7 +238,7 @@ private fun TabPill(
         modifier = modifier
             .fillMaxSize()
             .clip(CircleShape)
-            .background(if (isSelected) Color.White else Color.Transparent)
+            .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -246,7 +246,7 @@ private fun TabPill(
             text = label,
             fontSize = 15.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) ProjectileBlue else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

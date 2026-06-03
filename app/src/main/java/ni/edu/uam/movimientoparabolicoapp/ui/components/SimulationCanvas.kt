@@ -41,6 +41,7 @@ fun SimulationCanvas(
     collisionInfo: CollisionInfo?,
     maxSimulationTime: Double
 ) {
+    val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -58,8 +59,8 @@ fun SimulationCanvas(
                 collisionInfo
             )
 
-            // Fondo blanco sutil
-            drawRect(color = Color.White.copy(alpha = 0.5f), size = size)
+            // Fondo sutil del canvas
+            drawRect(color = surfaceContainerColor.copy(alpha = 0.1f), size = size)
 
             // Suelo (según mockup)
             val groundY = canvasHeight - 40f

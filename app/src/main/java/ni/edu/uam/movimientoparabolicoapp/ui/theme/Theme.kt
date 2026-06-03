@@ -16,8 +16,15 @@ private val DarkColorScheme = darkColorScheme(
     primary = ProjectileBlue,
     secondary = PurpleGrey80,
     tertiary = Pink80,
+    background = TextDark,
     surface = TextDark,
-    onSurface = SurfaceLight
+    surfaceContainer = BorderLight,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = SurfaceLight,
+    onSurface = SurfaceLight,
+    onSurfaceVariant = TextVariant
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -37,20 +44,12 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun MovimientoParabolicoAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Desactivamos dynamic color por defecto para mantener el diseño específico del mockup
+    darkTheme: Boolean = true, // Forzado a true por defecto
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    // Siempre usamos el esquema oscuro para cumplir con el requerimiento
+    val colorScheme = DarkColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

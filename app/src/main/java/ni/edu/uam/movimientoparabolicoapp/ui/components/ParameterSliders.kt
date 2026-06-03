@@ -120,7 +120,7 @@ fun ParameterSliders(
         // Sección: Entorno
         GroupTitle(
             label = "Entorno",
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         ParameterSlider(
