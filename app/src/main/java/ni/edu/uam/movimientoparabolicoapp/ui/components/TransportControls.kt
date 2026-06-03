@@ -13,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,8 +41,8 @@ fun TransportControls(
                 .weight(1f)
                 .height(64.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ProjectileBlue,
-                contentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             shape = RoundedCornerShape(32.dp),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)

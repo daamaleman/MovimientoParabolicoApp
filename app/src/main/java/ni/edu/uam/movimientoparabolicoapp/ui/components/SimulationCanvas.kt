@@ -2,6 +2,7 @@ package ni.edu.uam.movimientoparabolicoapp.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -45,18 +46,20 @@ fun SimulationCanvas(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(260.dp)
+            .height(280.dp) // Un poco más de altura para mejor visibilidad
             .clip(RoundedCornerShape(24.dp))
             .background(color = CanvasBg)
     ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth()) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
             val canvasWidth = size.width
             val canvasHeight = size.height
 
             val worldBounds = calculateWorldBounds(
-                projectileTrajectory,
-                targetTrajectory,
-                collisionInfo
+                projectilePos = projectilePos,
+                targetPos = targetPos,
+                projTraj = projectileTrajectory,
+                targetTraj = targetTrajectory,
+                collision = collisionInfo
             )
 
             // Fondo sutil del canvas
@@ -172,17 +175,22 @@ fun SimulationCanvas(
 }
 
 private fun DrawScope.calculateWorldBounds(
+    projectilePos: Vector2D,
+    targetPos: Vector2D,
     projTraj: List<Pair<Double, Vector2D>>,
     targetTraj: List<Pair<Double, Vector2D>>,
     collision: CollisionInfo?
 ): WorldBounds {
-    val allPositions = (projTraj.map { it.second } + targetTraj.map { it.second }).toMutableList()
+    val allPositions = mutableListOf<Vector2D>()
+    allPositions.add(projectilePos)
+    allPositions.add(targetPos)
+    allPositions.addAll(projTraj.map { it.second })
+    allPositions.addAll(targetTraj.map { it.second })
     if (collision != null) allPositions.add(collision.position)
 
-    if (allPositions.isEmpty()) return WorldBounds(maxX = 12.0, maxY = 10.0)
-
-    val maxX = (allPositions.maxOfOrNull { it.x } ?: 10.0) + 3.0
-    val maxY = (allPositions.maxOfOrNull { it.y } ?: 8.0) + 3.0
+    // Buscamos los límites reales y añadimos un margen generoso
+    val maxX = (allPositions.maxOfOrNull { it.x } ?: 10.0) + 5.0
+    val maxY = (allPositions.maxOfOrNull { it.y } ?: 8.0) + 5.0
 
     return WorldBounds(maxX = maxX, maxY = maxY)
 }

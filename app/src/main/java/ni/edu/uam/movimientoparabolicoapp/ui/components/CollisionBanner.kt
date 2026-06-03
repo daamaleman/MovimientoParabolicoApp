@@ -25,14 +25,14 @@ fun CollisionBanner(collisionInfo: CollisionInfo?) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(color = Color(0xFFba1a1a))
+                .background(color = MaterialTheme.colorScheme.errorContainer)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "💥 ¡Colisión! t = ${String.format("%.2f", collisionInfo.time)} s, " +
                         "d = ${String.format("%.4f", collisionInfo.distance)} m",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onErrorContainer,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
