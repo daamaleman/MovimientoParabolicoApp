@@ -63,7 +63,9 @@ fun SimulationCanvas(
             drawRect(color = surfaceContainerColor.copy(alpha = 0.1f), size = size)
 
             // Suelo (según mockup)
-            val groundY = canvasHeight - 40f
+            val origin = world2Canvas(Vector2D(0.0, 0.0), worldBounds, canvasWidth, canvasHeight)
+            val groundY = origin.y
+
             drawRect(
                 color = GroundGreen,
                 topLeft = Offset(0f, groundY),
@@ -193,8 +195,16 @@ private fun DrawScope.world2Canvas(
     canvasWidth: Float,
     canvasHeight: Float
 ): Offset {
-    val canvasX = 40f + ((worldPos.x / worldBounds.maxX) * (canvasWidth - 80f)).toFloat()
-    val canvasY = canvasHeight - 40f - ((worldPos.y / worldBounds.maxY) * (canvasHeight - 80f)).toFloat()
+    val paddingSide = 60f
+    val paddingBottom = 60f
+    val paddingTop = 40f
+    
+    val availableWidth = canvasWidth - (paddingSide * 2)
+    val availableHeight = canvasHeight - paddingBottom - paddingTop
+    
+    val canvasX = paddingSide + ((worldPos.x / worldBounds.maxX) * availableWidth).toFloat()
+    val canvasY = (canvasHeight - paddingBottom) - ((worldPos.y / worldBounds.maxY) * availableHeight).toFloat()
+    
     return Offset(canvasX, canvasY)
 }
 
@@ -204,11 +214,22 @@ private fun DrawScope.drawGrid(
     canvasHeight: Float
 ) {
     val gridCount = 8
-    val color = Color.LightGray.copy(alpha = 0.3f)
+    val color = Color.Gray.copy(alpha = 0.15f)
+    
+    val origin = world2Canvas(Vector2D(0.0, 0.0), worldBounds, canvasWidth, canvasHeight)
     
     for (i in 0..gridCount) {
-        val x = 40f + (i * (canvasWidth - 80f) / gridCount)
-        drawLine(color = color, start = Offset(x, 0f), end = Offset(x, canvasHeight - 40f), strokeWidth = 1f)
+        // Verticales
+        val xVal = (worldBounds.maxX / gridCount) * i
+        val xPos = world2Canvas(Vector2D(xVal, 0.0), worldBounds, canvasWidth, canvasHeight).x
+        drawLine(color = color, start = Offset(xPos, 20f), end = Offset(xPos, origin.y), strokeWidth = 1f)
+        
+        // Horizontales
+        val yVal = (worldBounds.maxY / gridCount) * i
+        val yPos = world2Canvas(Vector2D(0.0, yVal), worldBounds, canvasWidth, canvasHeight).y
+        if (yPos > 20f) {
+            drawLine(color = color, start = Offset(origin.x, yPos), end = Offset(canvasWidth - 20f, yPos), strokeWidth = 1f)
+        }
     }
 }
 

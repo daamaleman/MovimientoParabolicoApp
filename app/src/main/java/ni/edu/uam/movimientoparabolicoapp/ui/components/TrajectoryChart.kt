@@ -102,21 +102,45 @@ private fun ChartCanvas(
 
         if (allX.isEmpty() || allY.isEmpty()) return@Canvas
 
-        val maxX = (allX.maxOrNull() ?: 10.0) * 1.1
-        val maxY = (allY.maxOrNull() ?: 10.0) * 1.1
+        // Calculamos los límites máximos pero aseguramos que el mínimo sea 0
+        // y añadimos un margen del 20% para que no se pegue a los bordes
+        val maxX = (allX.maxOrNull() ?: 10.0).coerceAtLeast(1.0) * 1.2
+        val maxY = (allY.maxOrNull() ?: 10.0).coerceAtLeast(1.0) * 1.2
+
+        // Usamos el máximo entre X e Y para mantener una relación de aspecto 1:1 
+        // y que la parábola no se vea deformada/estirada, o simplemente escalamos según el canvas.
+        // Para que se vea "bien" y no tan arriba, vamos a usar escalas independientes pero con padding.
 
         fun worldToCanvas(x: Double, y: Double): androidx.compose.ui.geometry.Offset {
-            val cx = (x / maxX * width).toFloat()
-            val cy = (height - (y / maxY * height)).toFloat()
+            // Dejamos un pequeño margen interno en el dibujo (padding de 10px)
+            val padding = 20f
+            val availableWidth = width - (padding * 2)
+            val availableHeight = height - (padding * 2)
+
+            val cx = padding + (x / maxX * availableWidth).toFloat()
+            // Invertimos Y para que 0 esté abajo, y aplicamos el padding
+            val cy = (height - padding) - (y / maxY * availableHeight).toFloat()
             return androidx.compose.ui.geometry.Offset(cx, cy)
         }
 
-        // Guías
+        // Guías de fondo (Grilla)
         val guideColor = Color.LightGray.copy(alpha = 0.2f)
-        for (i in 1..4) {
-            val y = height * i / 5
-            drawLine(color = guideColor, start = androidx.compose.ui.geometry.Offset(0f, y), end = androidx.compose.ui.geometry.Offset(width, y), strokeWidth = 1f)
+        val divisions = 5
+        for (i in 0..divisions) {
+            // Líneas horizontales
+            val yPos = worldToCanvas(0.0, (maxY / divisions) * i).y
+            drawLine(color = guideColor, start = androidx.compose.ui.geometry.Offset(0f, yPos), end = androidx.compose.ui.geometry.Offset(width, yPos), strokeWidth = 1f)
+            
+            // Líneas verticales
+            val xPos = worldToCanvas((maxX / divisions) * i, 0.0).x
+            drawLine(color = guideColor, start = androidx.compose.ui.geometry.Offset(xPos, 0f), end = androidx.compose.ui.geometry.Offset(xPos, height), strokeWidth = 1f)
         }
+
+        // Ejes X e Y resaltados
+        val axisColor = Color.Gray.copy(alpha = 0.5f)
+        val origin = worldToCanvas(0.0, 0.0)
+        drawLine(color = axisColor, start = androidx.compose.ui.geometry.Offset(0f, origin.y), end = androidx.compose.ui.geometry.Offset(width, origin.y), strokeWidth = 2f)
+        drawLine(color = axisColor, start = androidx.compose.ui.geometry.Offset(origin.x, 0f), end = androidx.compose.ui.geometry.Offset(origin.x, height), strokeWidth = 2f)
 
         // Proyectil
         drawPathFromTrajectory(projectileTrajectory, ProjectileBlue) { x, y -> worldToCanvas(x, y) }
