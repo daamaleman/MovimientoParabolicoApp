@@ -154,7 +154,6 @@ fun SimulationScreen(
                     isRunning = state.isRunning,
                     onPlayPause = {
                         if (state.isRunning) viewModel.pause()
-                        else if (state.collisionInfo != null) viewModel.reset()
                         else viewModel.play()
                     },
                     onReset = { viewModel.reset() }

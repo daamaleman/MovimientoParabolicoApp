@@ -2,8 +2,11 @@ package ni.edu.uam.movimientoparabolicoapp.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ni.edu.uam.movimientoparabolicoapp.data.SimulationParams
 import ni.edu.uam.movimientoparabolicoapp.domain.CollisionInfo
@@ -14,58 +17,33 @@ import ni.edu.uam.movimientoparabolicoapp.domain.Vector2D
  * Estado de la simulación en cada frame/actualización.
  */
 data class SimulationState(
-    // Parámetros actuales
     val params: SimulationParams = SimulationParams(),
-
-    // Tiempo transcurrido en la simulación
     val currentTime: Double = 0.0,
-
-    // ¿Está en reproducción?
     val isRunning: Boolean = false,
-
-    // ¿Ocurrió una colisión?
     val collisionInfo: CollisionInfo? = null,
-
-    // Posición actual del proyectil A
     val projectilePos: Vector2D = Vector2D(),
     val projectileVelocity: Vector2D = Vector2D(),
     val projectileSpeed: Double = 0.0,
-
-    // Posición actual del objetivo B
     val targetPos: Vector2D = Vector2D(),
     val targetVelocity: Vector2D = Vector2D(),
     val targetSpeed: Double = 0.0,
-
-    // Distancia actual entre cuerpos
     val currentDistance: Double = Double.MAX_VALUE,
-
-    // Tiempo máximo de simulación calculado
     val maxSimulationTime: Double = 10.0,
-
-    // Trayectorias calculadas para gráficas/visualización
     val projectileTrajectory: List<Pair<Double, Vector2D>> = emptyList(),
     val targetTrajectory: List<Pair<Double, Vector2D>> = emptyList()
 )
 
 /**
  * ViewModel que gestiona la simulación usando MVVM.
- *
- * Responsabilidades:
- * - Mantener el estado de la simulación
- * - Ejecutar el loop de animación con withFrameNanos/LaunchedEffect
- * - Manejar play/pause/reset
- * - Actualizar los parámetros de entrada
- * - Detección de colisiones
  */
 class SimulationViewModel : ViewModel() {
-
-    private val kinematicsEngine = KinematicsEngine()
 
     private val _simulationState = MutableStateFlow(SimulationState())
     val simulationState = _simulationState.asStateFlow()
 
+    private var animationJob: Job? = null
+
     init {
-        // Inicializa con parámetros por defecto del "tiro al mono"
         updateParams(SimulationParams.monkeyHunterPreset())
     }
 
@@ -73,6 +51,8 @@ class SimulationViewModel : ViewModel() {
      * Actualiza los parámetros de la simulación y recalcula las trayectorias.
      */
     fun updateParams(newParams: SimulationParams) {
+        val kinematicsEngine = KinematicsEngine(gravity = newParams.gravity)
+
         val projectile = kinematicsEngine.createProjectile(
             position = Vector2D(newParams.projectileX, newParams.projectileY),
             initialSpeed = newParams.projectileInitialSpeed,
@@ -81,189 +61,139 @@ class SimulationViewModel : ViewModel() {
 
         val target = kinematicsEngine.createFallingTarget(
             position = Vector2D(newParams.targetX, newParams.targetY),
-            initialSpeed = newParams.targetInitialSpeed,
-            angleRadians = 0.0  // El objetivo cae verticalmente (v0=0) o hacia el proyectil
+            initialSpeed = newParams.targetInitialSpeed
         )
 
-        // Calcula estadísticas completas
         val stats = kinematicsEngine.calculateSimulationStats(
             projectile = projectile,
             target = target,
-            maxSimulationTime = 10.0
+            maxSimulationTime = 15.0
         )
 
-        // Reinicia la simulación con los nuevos parámetros
-        _simulationState.value = SimulationState(
-            params = newParams,
-            currentTime = 0.0,
-            isRunning = false,
-            collisionInfo = null,
-            projectilePos = projectile.getPosition(0.0),
-            projectileVelocity = projectile.getVelocity(0.0),
-            projectileSpeed = projectile.getSpeed(0.0),
-            targetPos = target.getPosition(0.0),
-            targetVelocity = target.getVelocity(0.0),
-            targetSpeed = target.getSpeed(0.0),
-            currentDistance = kinematicsEngine.getDistance(projectile, target, 0.0),
-            maxSimulationTime = stats.maxTime,
-            projectileTrajectory = stats.projectileTrajectory,
-            targetTrajectory = stats.targetTrajectory
-        )
+        _simulationState.update { currentState ->
+            currentState.copy(
+                params = newParams,
+                currentTime = 0.0,
+                isRunning = false,
+                collisionInfo = null,
+                projectilePos = projectile.getPosition(0.0),
+                projectileVelocity = projectile.getVelocity(0.0),
+                projectileSpeed = projectile.getSpeed(0.0),
+                targetPos = target.getPosition(0.0),
+                targetVelocity = target.getVelocity(0.0),
+                targetSpeed = target.getSpeed(0.0),
+                currentDistance = kinematicsEngine.getDistance(projectile, target, 0.0),
+                maxSimulationTime = stats.maxTime,
+                projectileTrajectory = stats.projectileTrajectory,
+                targetTrajectory = stats.targetTrajectory
+            )
+        }
     }
 
-    /**
-     * Actualiza solo un parámetro específico (ej: velocidad inicial).
-     * Mantiene los demás sin cambios.
-     */
     fun updateParam(updater: (SimulationParams) -> SimulationParams) {
         updateParams(updater(_simulationState.value.params))
     }
 
-    /**
-     * Inicia la reproducción de la simulación.
-     */
     fun play() {
-        _simulationState.value = _simulationState.value.copy(isRunning = true)
+        if (_simulationState.value.isRunning) return
+
+        // Auto-reset si ya terminó
+        val state = _simulationState.value
+        if (state.collisionInfo != null || state.currentTime >= state.maxSimulationTime) {
+            reset()
+        }
+
+        _simulationState.update { it.copy(isRunning = true) }
         startAnimationLoop()
     }
 
-    /**
-     * Pausa la reproducción.
-     */
     fun pause() {
-        _simulationState.value = _simulationState.value.copy(isRunning = false)
+        _simulationState.update { it.copy(isRunning = false) }
+        animationJob?.cancel()
     }
 
-    /**
-     * Reinicia la simulación a t=0 sin cambiar parámetros.
-     */
     fun reset() {
-        _simulationState.value = _simulationState.value.copy(
-            currentTime = 0.0,
-            isRunning = false,
-            collisionInfo = null
-        )
+        animationJob?.cancel()
         updateParams(_simulationState.value.params)
     }
 
-    /**
-     * Loop de animación que se ejecuta en cada frame usando coroutines.
-     * Se ejecuta en el scope del ViewModel para ser cancelado automáticamente.
-     */
     private fun startAnimationLoop() {
-        viewModelScope.launch {
+        animationJob?.cancel()
+        animationJob = viewModelScope.launch {
             var lastFrameTime = System.nanoTime()
 
             while (_simulationState.value.isRunning) {
                 val currentFrameTime = System.nanoTime()
-                val deltaTimeNanos = currentFrameTime - lastFrameTime
-                val deltaTimeSecs = deltaTimeNanos / 1_000_000_000.0
+                val deltaTimeSecs = (currentFrameTime - lastFrameTime) / 1_000_000_000.0
+                lastFrameTime = currentFrameTime
 
-                // Aplica el multiplicador de velocidad de animación
-                val adjustedDeltaTime = deltaTimeSecs * _simulationState.value.params.animationSpeedMultiplier
+                val state = _simulationState.value
+                val params = state.params
+                
+                val adjustedDeltaTime = deltaTimeSecs * params.animationSpeedMultiplier
+                val newTime = state.currentTime + adjustedDeltaTime
 
-                // Actualiza el tiempo
-                val newTime = _simulationState.value.currentTime + adjustedDeltaTime
-
-                // Crea cuerpos con parámetros actuales
+                val kinematicsEngine = KinematicsEngine(gravity = params.gravity)
                 val projectile = kinematicsEngine.createProjectile(
-                    position = Vector2D(
-                        _simulationState.value.params.projectileX,
-                        _simulationState.value.params.projectileY
-                    ),
-                    initialSpeed = _simulationState.value.params.projectileInitialSpeed,
-                    angleRadians = _simulationState.value.params.getProjectileAngleRadians()
+                    position = Vector2D(params.projectileX, params.projectileY),
+                    initialSpeed = params.projectileInitialSpeed,
+                    angleRadians = params.getProjectileAngleRadians()
                 )
 
                 val target = kinematicsEngine.createFallingTarget(
-                    position = Vector2D(
-                        _simulationState.value.params.targetX,
-                        _simulationState.value.params.targetY
-                    ),
-                    initialSpeed = _simulationState.value.params.targetInitialSpeed
+                    position = Vector2D(params.targetX, params.targetY),
+                    initialSpeed = params.targetInitialSpeed
                 )
 
-                // Obtiene posiciones y velocidades actuales
                 val projectilePos = projectile.getPosition(newTime)
-                val projectileVel = projectile.getVelocity(newTime)
                 val targetPos = target.getPosition(newTime)
-                val targetVel = target.getVelocity(newTime)
+                
+                val projectileInAir = projectilePos.y >= -0.01 // Pequeño margen
+                val targetInAir = targetPos.y >= -0.01
 
-                // Verifica si ambos están en el aire
-                val projectileInAir = kinematicsEngine.isInAir(projectile, newTime)
-                val targetInAir = kinematicsEngine.isInAir(target, newTime)
-
-                // Detecta colisión
                 val collision = kinematicsEngine.detectCollision(projectile, target, newTime)
+                
+                val shouldStop = collision.occurred || (!projectileInAir && !targetInAir) || newTime > state.maxSimulationTime
 
-                // Detiene si hay colisión o ambos tocan el suelo
-                val shouldStop = collision.occurred || (!projectileInAir && !targetInAir)
-
-                val distance = kinematicsEngine.getDistance(projectile, target, newTime)
-
-                // Actualiza el estado
-                _simulationState.value = _simulationState.value.copy(
-                    currentTime = newTime,
-                    isRunning = !shouldStop,
-                    collisionInfo = if (collision.occurred) collision else null,
-                    projectilePos = if (projectileInAir) projectilePos else projectilePos.copy(y = 0.0),
-                    projectileVelocity = projectileVel,
-                    projectileSpeed = projectileVel.magnitude,
-                    targetPos = if (targetInAir) targetPos else targetPos.copy(y = 0.0),
-                    targetVelocity = targetVel,
-                    targetSpeed = targetVel.magnitude,
-                    currentDistance = distance
-                )
-
-                if (shouldStop) {
-                    break
+                _simulationState.update {
+                    it.copy(
+                        currentTime = newTime,
+                        isRunning = !shouldStop,
+                        collisionInfo = if (collision.occurred) collision else null,
+                        projectilePos = if (projectileInAir) projectilePos else projectilePos.copy(y = 0.0),
+                        projectileVelocity = projectile.getVelocity(newTime),
+                        projectileSpeed = projectile.getSpeed(newTime),
+                        targetPos = if (targetInAir) targetPos else targetPos.copy(y = 0.0),
+                        targetVelocity = target.getVelocity(newTime),
+                        targetSpeed = target.getSpeed(newTime),
+                        currentDistance = kinematicsEngine.getDistance(projectile, target, newTime)
+                    )
                 }
 
-                lastFrameTime = currentFrameTime
-
-                // Pequeña pausa para no bloquear el hilo (evita busy-waiting)
-                kotlinx.coroutines.delay(16)  // ~60 FPS
+                if (shouldStop) break
+                delay(16)
             }
         }
     }
 
-    /**
-     * Calcula el ángulo de apuntamiento para hacer "tiro al mono".
-     */
     fun calculateMonkeyHunterAngle(): Double {
-        val shooterPos = Vector2D(
-            _simulationState.value.params.projectileX,
-            _simulationState.value.params.projectileY
-        )
-        val targetPos = Vector2D(
-            _simulationState.value.params.targetX,
-            _simulationState.value.params.targetY
-        )
+        val params = _simulationState.value.params
+        val kinematicsEngine = KinematicsEngine(gravity = params.gravity)
+        val shooterPos = Vector2D(params.projectileX, params.projectileY)
+        val targetPos = Vector2D(params.targetX, params.targetY)
 
-        val angleRadians = kinematicsEngine.calculateMonkeyHunterAngle(shooterPos, targetPos)
-        return Math.toDegrees(angleRadians)
+        return Math.toDegrees(kinematicsEngine.calculateMonkeyHunterAngle(shooterPos, targetPos))
     }
 
-    /**
-     * Aplica el preset de "tiro al mono".
-     */
     fun applyMonkeyHunterPreset() {
-        val preset = SimulationParams.monkeyHunterPreset()
-        updateParams(preset)
+        updateParams(SimulationParams.monkeyHunterPreset())
     }
 
-    /**
-     * Aplica preset de la Luna.
-     */
     fun applyMoonPreset() {
         updateParams(SimulationParams.moonPreset())
     }
 
-    /**
-     * Aplica preset de Marte.
-     */
     fun applyMarsPreset() {
         updateParams(SimulationParams.marsPreset())
     }
 }
-
