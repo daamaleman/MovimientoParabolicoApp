@@ -140,6 +140,8 @@ fun SimulationScreen(
                 targetTrajectory = state.targetTrajectory,
                 collisionInfo = state.collisionInfo,
                 maxSimulationTime = state.maxSimulationTime,
+                initialProjectilePos = ni.edu.uam.movimientoparabolicoapp.domain.Vector2D(state.params.projectileX, state.params.projectileY),
+                launchAngleRadians = state.params.getProjectileAngleRadians(),
                 modifier = Modifier.padding(16.dp)
             )
 

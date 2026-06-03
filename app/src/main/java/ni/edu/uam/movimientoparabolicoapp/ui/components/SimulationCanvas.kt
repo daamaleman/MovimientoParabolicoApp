@@ -40,13 +40,15 @@ fun SimulationCanvas(
     projectileTrajectory: List<Pair<Double, Vector2D>>,
     targetTrajectory: List<Pair<Double, Vector2D>>,
     collisionInfo: CollisionInfo?,
-    maxSimulationTime: Double
+    maxSimulationTime: Double,
+    initialProjectilePos: Vector2D,
+    launchAngleRadians: Double
 ) {
     val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(280.dp) // Un poco más de altura para mejor visibilidad
+            .height(280.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(color = CanvasBg)
     ) {
@@ -83,6 +85,23 @@ fun SimulationCanvas(
 
             // Cuadrícula sutil
             drawGrid(worldBounds, canvasWidth, canvasHeight)
+
+            // --- LÍNEA DE APUNTADO (NUEVA) ---
+            val startPoint = world2Canvas(initialProjectilePos, worldBounds, canvasWidth, canvasHeight)
+            val aimLength = 1000.0 // Longitud virtual para que atraviese el canvas
+            val endPointWorld = Vector2D(
+                initialProjectilePos.x + aimLength * kotlin.math.cos(launchAngleRadians),
+                initialProjectilePos.y + aimLength * kotlin.math.sin(launchAngleRadians)
+            )
+            val endPoint = world2Canvas(endPointWorld, worldBounds, canvasWidth, canvasHeight)
+            
+            drawLine(
+                color = ProjectileBlue.copy(alpha = 0.2f),
+                start = startPoint,
+                end = endPoint,
+                strokeWidth = 1.5f,
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+            )
 
             // Trayectorias predicción (punteadas)
             if (projectileTrajectory.isNotEmpty()) {
