@@ -124,6 +124,13 @@ fun SimulationScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
+            // ========== Banner de Mensaje (Solo si hay colisión) ==========
+            state.collisionInfo?.let { collision ->
+                if (collision.occurred) {
+                    CollisionBanner(collisionInfo = collision)
+                }
+            }
+
             // ========== Canvas de Simulación ==========
             SimulationCanvas(
                 currentTime = state.currentTime,
@@ -211,13 +218,6 @@ fun SimulationScreen(
                         collisionInfo = state.collisionInfo,
                         modifier = Modifier.padding(16.dp)
                     )
-                }
-            }
-
-            // ========== Banner de Colisión (Solo si ocurrió) ==========
-            state.collisionInfo?.let { collision ->
-                if (collision.occurred) {
-                    CollisionBanner(collisionInfo = collision)
                 }
             }
 

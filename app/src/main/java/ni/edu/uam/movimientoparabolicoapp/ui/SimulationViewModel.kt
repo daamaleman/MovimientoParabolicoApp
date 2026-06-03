@@ -148,25 +148,28 @@ class SimulationViewModel : ViewModel() {
                 val projectilePos = projectile.getPosition(newTime)
                 val targetPos = target.getPosition(newTime)
                 
-                val projectileInAir = projectilePos.y >= -0.01 // Pequeño margen
+                val projectileInAir = projectilePos.y >= -0.01 
                 val targetInAir = targetPos.y >= -0.01
 
-                val collision = kinematicsEngine.detectCollision(projectile, target, newTime)
+                // Usamos búsqueda en el intervalo para no saltarnos el choque entre frames
+                val collision = kinematicsEngine.findCollisionInInterval(
+                    projectile, target, state.currentTime, newTime
+                ) ?: kinematicsEngine.detectCollision(projectile, target, newTime)
                 
                 val shouldStop = collision.occurred || (!projectileInAir && !targetInAir) || newTime > state.maxSimulationTime
 
                 _simulationState.update {
                     it.copy(
-                        currentTime = newTime,
+                        currentTime = if (collision.occurred) collision.time else newTime,
                         isRunning = !shouldStop,
                         collisionInfo = if (collision.occurred) collision else null,
-                        projectilePos = if (projectileInAir) projectilePos else projectilePos.copy(y = 0.0),
+                        projectilePos = if (collision.occurred) projectile.getPosition(collision.time) else (if (projectileInAir) projectilePos else projectilePos.copy(y = 0.0)),
+                        targetPos = if (collision.occurred) target.getPosition(collision.time) else (if (targetInAir) targetPos else targetPos.copy(y = 0.0)),
                         projectileVelocity = projectile.getVelocity(newTime),
                         projectileSpeed = projectile.getSpeed(newTime),
-                        targetPos = if (targetInAir) targetPos else targetPos.copy(y = 0.0),
                         targetVelocity = target.getVelocity(newTime),
                         targetSpeed = target.getSpeed(newTime),
-                        currentDistance = kinematicsEngine.getDistance(projectile, target, newTime)
+                        currentDistance = if (collision.occurred) collision.distance else kinematicsEngine.getDistance(projectile, target, newTime)
                     )
                 }
 
