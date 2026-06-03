@@ -1,389 +1,118 @@
-# Simulador de Movimiento Parabólico - Colisión de Dos Cuerpos
+# 🎯 MovimientoParabolicoApp
 
-## 📱 Descripción General
+**Simulador Cinemático de Alto Desempeño para Android**
 
-Aplicación Android nativa en **Kotlin** que simula el **movimiento parabólico de dos cuerpos con colisión** (escenario tipo **"tiro al mono" / choque de dos proyectiles**).
-
-### Características Principales
-
-- ✅ **Física exacta**: Ecuaciones de cinemática 100% analíticas (sin métodos numéricos aproximados)
-- ✅ **Animación fluida**: Loop basado en `withFrameNanos` + Coroutines (no Thread.sleep)
-- ✅ **Detección de colisión**: Distancia < 1 mm (0.001 m)
-- ✅ **Parámetros editables**: Sliders para todos los controles
-- ✅ **Gráficas nativas**: Trayectorias y(x), y(t) con Vico
-- ✅ **Canvas animado**: Visualización en tiempo real con trayectorias y marcas de colisión
-- ✅ **Material 3 Design**: Tema dinámico, claro/oscuro, colores modernos
-- ✅ **Pruebas unitarias**: JUnit para todas las ecuaciones de física
+`MovimientoParabolicoApp` es una plataforma educativa avanzada desarrollada en **Kotlin** y **Jetpack Compose** que permite modelar, visualizar y analizar el movimiento parabólico de proyectiles y la colisión de dos cuerpos en tiempo real (escenario clásico del "Tiro al Mono").
 
 ---
 
-## 🛠️ Stack Técnico
+## 🏗️ Arquitectura del Sistema
 
-| Componente | Detalles |
-|-----------|----------|
-| **Lenguaje** | Kotlin 2.2.10 (100%) |
-| **SDK** | minSdk 24, targetSdk 35, compileSdk 35 |
-| **Arquitectura** | MVVM + ViewModel + StateFlow + Coroutines |
-| **UI** | Jetpack Compose + Material 3 + Vico Charts |
-| **Gravedad** | kotlin.math + Apache Commons Math 3 (vectores) |
-| **Build** | Gradle Kotlin DSL (build.gradle.kts) + catálogo (libs.versions.toml) |
+El proyecto sigue una arquitectura **MVVM (Model-View-ViewModel)** robusta, desacoplando completamente la lógica física de la representación visual.
 
----
+### Capas del Proyecto:
 
-## 📂 Estructura del Proyecto
+1.  **Domain (Capa de Física):**
+    *   **Independencia Total:** Escrito en Kotlin puro, sin dependencias de Android. Esto permite que el motor de física sea portable y fácilmente testeable.
+    *   **Motor Cinemático (`KinematicsEngine`):** Encargado de instanciar cuerpos físicos (`Projectile`, `FallingTarget`) y orquestar el cálculo de trayectorias.
+    *   **Detector de Colisiones (`CollisionDetector`):** Implementa algoritmos de proximidad euclidiana con un umbral de precisión de **1 milímetro (0.001m)**.
 
-```
-app/src/
-├── main/
-│   ├── java/ni/edu/uam/movimientoparabolicoapp/
-│   │   ├── MainActivity.kt                    # Punto de entrada
-│   │   ├── domain/                           # Lógica de física (sin Android)
-│   │   │   ├── Vector2D.kt                   # Data class para vectores
-│   │   │   ├── PhysicsBody.kt                # Interface de cuerpos
-│   │   │   ├── Projectile.kt                 # Proyectil (cuerpo A)
-│   │   │   ├── FallingTarget.kt              # Objetivo que cae (cuerpo B)
-│   │   │   ├── KinematicsEngine.kt           # Motor de cálculos
-│   │   │   └── CollisionDetector.kt          # Detección de colisión
-│   │   ├── data/
-│   │   │   └── SimulationParams.kt           # Parámetros editables
-│   │   ├── ui/
-│   │   │   ├── SimulationViewModel.kt        # MVVM + StateFlow
-│   │   │   ├── SimulationScreen.kt           # Pantalla principal
-│   │   │   └── components/
-│   │   │       ├── SimulationCanvas.kt       # Canvas con Draw
-│   │   │       ├── PositionReadout.kt        # Posición en vivo
-│   │   │       ├── ParameterSliders.kt       # Controles de parámetros
-│   │   │       ├── TransportControls.kt      # Play/Pause/Reset
-│   │   │       ├── CollisionBanner.kt        # Mensaje de colisión
-│   │   │       └── TrajectoryChart.kt        # Gráficas con Vico
-│   │   └── ui/theme/                         # Material 3 Theme
-│   │       ├── Color.kt, Type.kt, Theme.kt
-│   └── res/
-│       ├── values/, drawable/, mipmap-*
-│       └── AndroidManifest.xml
-├── test/
-│   └── java/ni/edu/uam/movimientoparabolicoapp/
-│       └── KinematicsEngineTest.kt           # Pruebas unitarias
-└── build.gradle.kts, libs.versions.toml
-```
+2.  **UI State & ViewModel:**
+    *   **Unidirectional Data Flow (UDF):** El estado de la simulación se gestiona mediante un `StateFlow` reactivo en `SimulationViewModel`.
+    *   **Loop de Animación Optimizado:** Utiliza Coroutines (`viewModelScope.launch`) con un control preciso de `deltaTime` (basado en `System.nanoTime()`), garantizando una fluidez de 60 FPS sin bloquear el hilo principal de la interfaz.
+
+3.  **UI Components (Jetpack Compose):**
+    *   **Composición Declarativa:** Interfaz construida íntegramente con Compose, utilizando Material Design 3.
+    *   **Custom Drawing:** Uso intensivo de `androidx.compose.foundation.Canvas` para la representación de trayectorias y el entorno físico.
 
 ---
 
-## 🔬 Ecuaciones de Física Implementadas
+## 🔬 Especificaciones Técnicas de Física
 
-### Movimiento Parabólico
+### 1. Ecuaciones Cinemáticas
+El simulador utiliza modelos analíticos exactos para determinar la posición $(x, y)$ y velocidad $(v_x, v_y)$ en cualquier instante $t$:
 
-Cada cuerpo con posición inicial **(x₀, y₀)**, rapidez inicial **v₀** y ángulo **θ**:
+*   **Posición Horizontal (MRU):** $x(t) = x_0 + (v_0 \cdot \cos\theta) \cdot t$
+*   **Posición Vertical (MRUV):** $y(t) = y_0 + (v_0 \cdot \sin\theta) \cdot t - \frac{1}{2}gt^2$
+*   **Velocidad Instantánea:** $v(t) = \sqrt{v_x^2 + (v_y - gt)^2}$
 
-#### Componentes de Velocidad Inicial
+### 2. Detección de Colisiones por Intervalos
+Para evitar el efecto de "túnel" (donde los objetos se cruzan entre frames sin detectarse), el motor implementa una **búsqueda de colisión por intervalos**:
+*   En cada frame, se analiza el segmento de tiempo $[t_{anterior}, t_{actual}]$.
+*   Se utiliza `findCollisionInInterval` para determinar si el punto de contacto exacto ocurrió en medio del salto temporal.
+
+### 3. Teorema del "Tiro al Mono"
+La aplicación incluye lógica para calcular automáticamente el ángulo de interceptación:
+$$\theta = \arctan\left(\frac{y_{objetivo} - y_{lanzador}}{x_{objetivo} - x_{lanzador}}\right)$$
+Si ambos cuerpos caen bajo la misma gravedad $g$, la colisión está garantizada independientemente de la velocidad inicial $v_0$.
+
+---
+
+## 🎨 Diseño y UX (User Experience)
+
+### Modo Oscuro Permanente
+La aplicación está diseñada bajo un esquema de **Modo Oscuro Permanente**, optimizado para el análisis de gráficas y visualización de alto contraste:
+*   **ProjectileBlue (`#8B95F6`)** y **TargetOrange (`#FF8B66`)**: Tonos neón vibrantes que aseguran visibilidad sobre el fondo profundo.
+*   **Surface Design:** Uso de `surfaceContainer` y elevaciones tonales para separar los controles de la visualización principal.
+
+### Visualización Dinámica
+*   **Canvas de Simulación:** Renderizado 2D con suelo anclado dinámicamente al origen físico $(0,0)$.
+*   **Gráfica Analítica y(x):**
+    *   Implementa efectos de **Glow** (brillo) en las líneas de trayectoria.
+    *   **Sombreado de área** bajo la curva para mejorar la percepción de altura.
+    *   **Seguimiento dinámico:** Marcadores móviles que indican la posición actual de los objetos en la gráfica analítica.
+*   **Notificaciones Suaves:** El sistema de alerta de colisión utiliza un diseño de tarjeta minimalista con transparencias, mostrando el tiempo e impacto en coordenadas exactas.
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Tecnología | Propósito |
+| :--- | :--- |
+| **Kotlin 2.0+** | Lenguaje de programación principal. |
+| **Jetpack Compose** | Toolkit moderno para UI declarativa. |
+| **Material 3** | Sistema de diseño de última generación. |
+| **Kotlin Coroutines** | Gestión de concurrencia y loop de simulación. |
+| **StateFlow** | Gestión reactiva del estado de la aplicación. |
+| **JUnit 4** | Suite de pruebas unitarias para el motor físico. |
+
+---
+
+## 📂 Estructura del Código Fuente
+
 ```
-v₀ₓ = v₀ · cos(θ)
-v₀ᵧ = v₀ · sin(θ)
-```
-
-#### Posición en Función del Tiempo
-```
-x(t) = x₀ + v₀ₓ · t
-y(t) = y₀ + v₀ᵧ · t − ½ · g · t²
-```
-- **x(t)**: Movimiento Rectilíneo Uniforme (MRU)
-- **y(t)**: Movimiento Uniformemente Acelerado (MRUV)
-
-#### Velocidad en Función del Tiempo
-```
-vₓ(t) = v₀ₓ                 (constante)
-vᵧ(t) = v₀ᵧ − g · t
-v(t) = √(vₓ² + vᵧ²)         (rapidez)
-```
-
-#### Magnitudes Derivadas
-```
-Altura máxima:    h_max = y₀ + (v₀ᵧ)² / (2g)
-Tiempo de vuelo:  t_v = (√(v₀ᵧ² + 2·g·y₀) + v₀ᵧ) / g
-Alcance:          x_max = x₀ + v₀ₓ · t_v
-```
-
-### Detección de Colisión
-
-```
-d(t) = √((xₐ(t) − xᵦ(t))² + (yₐ(t) − yᵦ(t))²)
-
-Colisión si: d < 0.001 m (1 milímetro)
-```
-
-### El Efecto "Tiro al Mono"
-
-**Principio**: Si ambos cuerpos experimentan la misma gravedad, apuntar a la posición inicial del objetivo **garantiza colisión**, aunque se mueva (especialmente si cae libre v₀=0).
-
-**Cálculo del ángulo**:
-```
-θ = atan2(yᵦ − yₐ, xᵦ − xₐ)
+ni.edu.uam.movimientoparabolicoapp/
+├── data/
+│   └── SimulationParams.kt         # Estructura de datos de configuración y presets.
+├── domain/
+│   ├── Vector2D.kt                # Operaciones vectoriales personalizadas.
+│   ├── PhysicsBody.kt             # Abstracción de cuerpos con masa y trayectoria.
+│   ├── KinematicsEngine.kt        # Orquestador de cálculos cinemáticos.
+│   └── CollisionDetector.kt       # Algoritmos de detección de impacto.
+├── ui/
+│   ├── SimulationViewModel.kt     # Controlador del estado y loop de animación.
+│   ├── SimulationScreen.kt        # Orquestador de la UI principal (Scaffold).
+│   ├── components/                # Librería de componentes visuales (Canvas, Sliders, Charts).
+│   └── theme/                     # Definición de colores, tipografía y estilo oscuro.
+└── MainActivity.kt                # Punto de entrada de la aplicación.
 ```
 
 ---
 
-## 🚀 Cómo Ejecutar
+## 🚀 Instalación y Desarrollo
 
-### 1. Abrir en Android Studio
-
-```bash
-# Clonar o abrir el proyecto
-cd MovimientoParabolicoApp
-# Abrir en Android Studio: File → Open → [carpeta del proyecto]
-```
-
-### 2. Sincronizar Gradle
-
-- Android Studio detectará **build.gradle.kts** y **libs.versions.toml**
-- Haz clic en *"Sync Now"* del banner de Project Structure
-
-### 3. Ejecutar la app
-
-- **Emulador**: Select a virtual device (API ≥ 24)
-- **Dispositivo físico**: Conecta un dispositivo Android
-- Clic en ▶ **Run** (Shift + F10)
+1.  **Requisitos:** Android Studio Ladybug (o superior) y JDK 17.
+2.  **Clonación:** `git clone https://github.com/tu-usuario/MovimientoParabolicoApp.git`
+3.  **Build:** Sincronizar Gradle y ejecutar en un dispositivo con API 24 o superior.
 
 ---
 
-## 💡 Uso de la App
-
-### Control Principal
-
-| Botón/Control | Función |
-|--|--|
-| **▶ Iniciar** | Comienza la animación |
-| **❚❚ Detener** | Pausa la animación |
-| **⟲ Reset** | Reinicia a t=0 |
-| **⟳ Preset** | Aplica valores iniciales "Tiro al Mono" |
-
-### Parámetros Editables (Tab: Parámetros)
-
-**Objeto A — Proyectil**
-- Velocidad inicial v₀: 1–40 m/s
-- Ángulo θ: 0–90°
-- Posición x₀, y₀
-
-**Objeto B — Objetivo**
-- Posición x, y
-- Velocidad inicial v₀ (0 = cae libre)
-
-**Entorno**
-- Gravedad g: 1.6 m/s² (Luna) a 24.8 m/s² (Presets disponibles)
-- Velocidad de animación: 0.2× a 3× (cámara lenta/rápida)
-
-### Gráficas (Tab: Gráficas)
-
-- **y(x)**: Trayectoria de altura vs posición horizontal
-- **Punto de choque**: Marcado en verde si ocurre colisión
-
-### Readouts en Vivo
-
-Muestran en cada frame:
-- **Tiempo t**
-- **Posición (x, y)** de ambos objetos
-- **Rapidez v** de ambos objetos
-- **Distancia d** entre ellos
+## 🧪 Validación y Calidad
+El proyecto incluye una amplia suite de **Pruebas Unitarias** que validan:
+*   Conservación del movimiento horizontal.
+*   Precisión del tiempo de vuelo ($t_{v}$).
+*   Cálculo exacto del punto de colisión bajo diferentes gravedades ($g_{tierra}, g_{luna}, g_{marte}$).
 
 ---
 
-## 🧪 Pruebas Unitarias
-
-Ejecutar todos los tests:
-
-```bash
-# En Android Studio
-Right-click en app/src/test/ → Run 'KinematicsEngineTest'
-
-# O desde terminal
-./gradlew test
-```
-
-**Tests incluidos**:
-- ✅ Posición inicial (t=0)
-- ✅ Posición en movimiento
-- ✅ Velocidad constante horizontal
-- ✅ Velocidad lineal vertical
-- ✅ Altura máxima
-- ✅ Rapidez (magnitud)
-- ✅ Tiempo de vuelo
-- ✅ Distancia entre vectores
-- ✅ Operaciones vectoriales
-- ✅ Caída libre
-- ✅ Ángulo "tiro al mono"
-
----
-
-## 📊 Preset: "Tiro al Mono" (Default)
-
-Valores por defecto que demuestran la colisión garantizada:
-
-| Parámetro | Valor |
-|-----------|-------|
-| **Proyectil A** | |
-| — Posición | (0, 0) |
-| — Velocidad v₀ | 15 m/s |
-| — Ángulo θ | 38.7° (apuntando a B) |
-| **Objetivo B** | |
-| — Posición | (10, 8) m |
-| — Velocidad v₀ | 0 m/s (cae libre) |
-| **Entorno** | |
-| — g | 9.81 m/s² (Tierra) |
-| **Resultado** | Colisión en ~1.3 segundos |
-
-### Verificación
-
-```kotlin
-// Cálculo manual del ángulo:
-θ = atan2(8 - 0, 10 - 0) = atan2(8, 10) ≈ 38.66°
-
-// Tiempo de colisión aproximado (analítico):
-// Ambos tienen la misma g, así que sus posiciones relativas
-// permanecen en la línea de visión inicial → COLISIÓN GARANTIZADA
-```
-
----
-
-## 🎨 Diseño Material 3
-
-- **Tema dinámico**: Colores adaptativos según el dispositivo (Material You)
-- **Modo claro/oscuro**: Automático según preferencias del sistema
-- **Colores principales**:
-  - Proyectil A: Azul (#4f5bd5)
-  - Objetivo B: Naranja (#e0552b)
-  - Colisión: Verde (#1f8a4c)
-
----
-
-## 📝 Notas Técnicas
-
-### Animación sin Bloqueo de Hilo
-
-```kotlin
-// En SimulationViewModel:
-viewModelScope.launch {
-    while (_simulationState.value.isRunning) {
-        val deltaTime = ...  // Calcula delta de frame
-        updateState()         // Actualiza posiciones/velocidades
-        delay(16)            // ~60 FPS, NO Thread.sleep()
-    }
-}
-```
-
-### Detección Precisa de Colisión
-
-Se busca el mínimo de distancia en el intervalo [t_frame_anterior, t_frame].
-Esto evita "saltarse" colisiones si dt es grande.
-
-### Conversión de Grados a Radianes
-
-```kotlin
-angleRadians = angleDegrees * PI / 180.0
-```
-
-Mantenemos grados en UI (más intuitivo) e internamente radianes.
-
----
-
-## 🔧 Dependencias (resumen)
-
-```toml
-# Compose
-androidx-compose-bom = "2026.02.01"
-androidx-compose-ui = "..."
-androidx-compose-material3 = "..."
-
-# Gráficas
-vico-compose = "1.15.0"
-vico-compose-m3 = "1.15.0"
-
-# Matemáticas
-commons-math3 = "3.6.1"
-
-# Coroutines
-kotlinx-coroutines = "1.9.1"
-
-# Lifecycle
-androidx-lifecycle-viewmodel-compose = "2.8.0"
-```
-
-Todas definidas en `gradle/libs.versions.toml`.
-
----
-
-## 🐛 Casos Limite Manejados
-
-1. **Ángulo 0°**: Movimiento horizontal puro
-2. **Ángulo 90°**: Lanzamiento vertical
-3. **Gravedad muy pequeña** (Luna 1.62 m/s²): Tiempos de vuelo largos
-4. **v₀ = 0 para objetivo**: Caída libre pura
-5. **Objetos debajo del suelo** (y < 0): Se clampean a 0 en visualización
-6. **Colisión antes de t=0** (no ocurre): Solver busca solo t > 0
-
----
-
-## 📖 Módulos Explicados
-
-### 1. **domain/*.kt** (Física pura)
-- 100% independiente de Android
-- Testeable sin contexto de aplicación
-- Contiene toda la cinemática
-
-### 2. **data/SimulationParams.kt**
-- Data class con todos los parámetros
-- Presets (Tierra, Luna, Marte)
-- Serializable (para futuros guardados)
-
-### 3. **ui/SimulationViewModel.kt**
-- MVVM: Separa lógica de UI
-- StateFlow: Reactividad
-- Coroutines: Animación no bloqueante
-
-### 4. **ui/SimulationScreen.kt**
-- Compose Scaffold con TopAppBar
-- Tabs: Parámetros / Gráficas
-- Orquesta componentes
-
-### 5. **ui/components/\*.kt**
-- Componentes reutilizables
-- Cada uno única responsabilidad
-- Composables puros (no estado)
-
----
-
-## 🚀 Mejoras Futuras
-
-- [ ] Guardar/cargar simulaciones (JSON)
-- [ ] Exportar datos a CSV
-- [ ] Modo pausa + step frame-by-frame
-- [ ] Trazado de vector velocidad en canvas
-- [ ] Cálculo de energía cinética/potencial
-- [ ] Soporte de rozamiento del aire (drag)
-- [ ] Simulaciones en tiempo de compilación (presets más complejos)
-
----
-
-## 📜 Licencia
-
-Proyecto educativo. Libre para uso académico y personal.
-
----
-
-## 👤 Autor
-
-Simulador desarrollado como ejemplo completo de:
-- Kotlin puro en Android
-- Jetpack Compose
-- MVVM + Coroutines
-- Física exacta aplicada
-
----
-
-## 📞 Soporte
-
-Para dudas o reportes de errores, revisa:
-1. Las pruebas unitarias (`KinematicsEngineTest.kt`)
-2. Los comentarios en el código
-3. La documentación de Material 3 y Jetpack Compose
-
-¡Que disfrutes la simulación! 🎯✨
-
+**Desarrollado con ❤️ para la enseñanza de la Física y la Ingeniería de Software.**
